@@ -1,260 +1,186 @@
-# Memory / Concentration Game – Node Project Plan
+# 🧠 Memory Game – Project Plan (Node.js)
 
-This document describes a **small, well-scoped web-based Memory (Concentration) game** built with **Node.js** and a **visual frontend**. It is written to match the course requirements and can be shown directly to your teacher for approval.
+## 🎯 Project Goal
 
----
-
-## 1. Project Overview
-
-**Project name:** MemoryForge (working title)
-
-**Concept:**
-A classic *Memory / Concentration* game played in the browser. Cards are laid out face-down. The player flips two cards at a time, trying to find matching pairs.
-
-**Key idea for this assignment:**
-- The **game logic and state live on the Node server**
-- The **browser is only responsible for visuals and interaction**
-- Visual feedback (flip animations, matched states) makes the game engaging
+Build a web-based Memory game where **Node.js acts as the game engine**.
+The server is responsible for game logic, state handling, and match validation.
+The frontend renders the UI and sends player actions in real time.
 
 ---
 
-## 2. Why This Project Fits the Assignment
+## 📦 Tech Stack
 
-✔ Small and clearly scoped
-✔ Visual and interactive
-✔ Node.js is central (not just serving files)
-✔ Uses external packages meaningfully
-✔ Easy to demonstrate and explain
-✔ Natural error handling and edge cases
+### Node.js Core Modules
 
-This is not just a frontend game — it is a **Node-driven game service**.
+- [ ] http (create server)
+- [ ] fs (read/write data, optional highscores)
+- [ ] path (file handling)
+- [ ] process (environment & state)
 
----
+### External npm Packages
 
-## 3. High-Level Architecture
-
-```
-Browser (Canvas / DOM)
-  ↓ user actions
-Node Server (Game Logic)
-  ↓ game state updates
-Browser (Visual Updates)
-```
-
-### Responsibility split
-
-**Node.js**
-- Generates the game board
-- Shuffles cards
-- Validates moves
-- Tracks flipped cards
-- Detects matches and win condition
-- Resets / restarts games
-
-**Browser**
-- Renders cards visually
-- Animates card flips
-- Sends user clicks to server
-- Displays game state
+- [ ] ws (WebSocket – real-time game events)
+- [ ] nanoid (generate unique game IDs)
 
 ---
 
-## 4. Technology Choices
+## 🗂 Project Structure
 
-### Required
-- **Node.js**
-- **Express** (minimal routing only)
+### Root
 
-### Visuals
-Choose ONE:
-- **Canvas API** (recommended for polish)
-- OR plain HTML/CSS if needed
+- [ ] package.json
+- [ ] package-lock.json
+- [ ] index.js
+- [ ] .gitignore
 
-### Optional but strong additions
-- `ws` (WebSockets) – real-time updates
-- `uuid` – unique game/session IDs
+### Folders
 
-### Core Node modules used
-- `fs` – optional persistence
-- `path` – safe file handling
-
----
-
-## 5. Game Rules (MVP)
-
-- Grid size: 4×4 (16 cards)
-- 8 unique symbols/images
-- Each symbol appears exactly twice
-- Player can flip **max two cards at a time**
-- If cards match → stay face-up
-- If not → flip back after delay
-- Game ends when all pairs are matched
+- [ ] /server
+  - [ ] createServer.js
+  - [ ] /game
+    - [ ] gameManager.js
+    - [ ] createGameState.js
+    - [ ] applyMove.js
+    - [ ] shuffle.js
+- [ ] /public
+  - [ ] index.html
+  - [ ] style.css
+  - [ ] client.js
+- [ ] /utils
+  - [ ] validate.js
+- [ ] /data (optional, VG)
+  - [ ] highscores.json
 
 ---
 
-## 6. Step-by-Step Implementation Plan
+## 🧠 Game State Design
 
-### Step 1 – Project Setup
+Each game should store:
 
-- Initialize Node project
-- Create GitHub repo
-- Set up basic Express server
-- Create clean folder structure
+- [ ] gameId
+- [ ] cards (id, value, isMatched)
+- [ ] flippedCardIds (max 2)
+- [ ] attempts counter
+- [ ] lockBoard flag
+- [ ] game status (playing / won)
+- [ ] start time (VG)
+- [ ] end time (VG)
 
-```
-root
-├─ server
-│  ├─ index.js
-│  ├─ game
-│  │  ├─ gameState.js
-│  │  ├─ boardGenerator.js
-│  │  └─ rules.js
-│  └─ routes
-│     └─ gameRoutes.js
-├─ client
-│  ├─ index.html
-│  ├─ canvas.js
-│  ├─ animations.js
-│  └─ api.js
-└─ README.md
-```
+⚠️ Server must never expose hidden card values to the client.
 
 ---
 
-### Step 2 – Game Board Generation (Node)
+## 🔁 Client ↔ Server Communication (WebSocket)
 
-Create logic that:
-- Defines card symbols
-- Duplicates them into pairs
-- Shuffles the array
-- Assigns each card an ID
+### Client → Server Messages
 
-Output example:
-```json
-[
-  { "id": 1, "symbol": "🍎", "revealed": false, "matched": false },
-  { "id": 2, "symbol": "🍌", "revealed": false, "matched": false }
-]
-```
+- [ ] NEW_GAME
+- [ ] FLIP_CARD
+- [ ] GET_HIGHSCORES (VG)
+
+### Server → Client Messages
+
+- [ ] GAME_STATE
+- [ ] ERROR
+- [ ] HIGHSCORES (VG)
 
 ---
 
-### Step 3 – Game State Management (Node)
+## 🎮 Game Flow (MVP)
 
-Implement a game state object that tracks:
-- Cards
-- Currently flipped cards
-- Number of attempts
-- Match count
-
-Important rules:
-- Ignore clicks if two cards are already flipped
-- Prevent flipping already matched cards
-
----
-
-### Step 4 – API Design
-
-Minimal API endpoints:
-
-- `GET /api/game/start`
-  - Creates a new game
-  - Returns initial board (symbols hidden)
-
-- `POST /api/game/flip`
-  - Input: card ID
-  - Node validates move
-  - Updates game state
-  - Returns updated board state
-
-- `POST /api/game/reset`
-  - Resets game state
+- [ ] User opens the web page
+- [ ] User starts a new game
+- [ ] Server generates and shuffles cards
+- [ ] Cards are rendered face-down
+- [ ] User flips a card
+- [ ] Server updates game state
+- [ ] Match → cards stay open
+- [ ] No match → cards flip back after delay
+- [ ] Attempts counter increases
+- [ ] Game ends when all pairs are matched
 
 ---
 
-### Step 5 – Frontend Rendering (Canvas)
+## 🖥 Frontend Requirements
 
-Canvas responsibilities:
-- Draw card grid
-- Draw face-down cards
-- Draw face-up cards
-- Visually mark matched cards
+- [ ] Render card grid (4x4)
+- [ ] Clickable cards
+- [ ] Attempts counter
+- [ ] Game status message
+- [ ] New Game button
+- [ ] Responsive layout (basic)
 
-Each card is drawn based on state received from Node.
+### VG (Optional)
 
----
-
-### Step 6 – Animations
-
-Simple animations only:
-- Flip animation (scale X → 0 → 1)
-- Match highlight (color / glow)
-- Shake animation on mismatch
-
-Animations are **feedback**, not game logic.
+- [ ] Timer
+- [ ] Difficulty selector
+- [ ] Highscore list
 
 ---
 
-### Step 7 – User Interaction Flow
+## 🧩 Backend Responsibilities
 
-1. User clicks a card
-2. Frontend sends card ID to Node
-3. Node validates and updates game state
-4. Frontend re-renders board
-5. If two cards flipped:
-   - Wait briefly
-   - Node resolves match or mismatch
-
----
-
-### Step 8 – Win Condition
-
-- When all cards are matched:
-  - Node sends `gameComplete: true`
-  - Frontend shows win message
+- [ ] Generate game state
+- [ ] Shuffle cards
+- [ ] Validate moves
+- [ ] Prevent invalid clicks
+- [ ] Handle match / no match logic
+- [ ] Detect win condition
+- [ ] Send updated state via WebSocket
+- [ ] Handle client disconnects gracefully
 
 ---
 
-## 7. Error Handling (VG-level)
+## ⚠️ Error Handling
 
-Node must handle:
-- Invalid card ID
-- Clicking too fast
-- Double-clicking same card
-- Reset during active turn
-
-Frontend must handle:
-- Network errors
-- Server unavailable
+- [ ] Invalid gameId
+- [ ] Invalid cardId
+- [ ] Duplicate card click
+- [ ] Actions while board is locked
+- [ ] Missing or corrupt data file
+- [ ] WebSocket disconnect
 
 ---
 
-## 8. Stretch Goals (Optional)
+## 🧪 Testing Checklist
 
-Only if MVP is finished:
-- Difficulty levels (4×4, 6×6)
-- Timer or move counter
-- Procedural card faces (Canvas-generated)
-- Simple score storage in file
-
----
-
-## 9. How to Pitch This Project
-
-> "We are building a small web-based Memory game where Node.js controls all game logic and state, and the browser visualizes the game using Canvas. The focus is on clean architecture, modular code, and clear separation between logic and presentation."
+- [ ] Game can be completed
+- [ ] Cards never reveal values incorrectly
+- [ ] Board locks correctly on no-match
+- [ ] Attempts count correctly
+- [ ] Game resets correctly
+- [ ] No server crashes on bad input
 
 ---
 
-## 10. Success Criteria Checklist
+## 🧑‍🤝‍🧑 Collaboration (GitHub Flow)
 
-- [ ] Game fully playable
-- [ ] Node handles all rules
-- [ ] Clean file structure
-- [ ] No duplicated logic
-- [ ] Visual feedback implemented
-- [ ] Errors handled gracefully
+- [ ] Create issues for each feature
+- [ ] Use feature branches
+- [ ] Meaningful commit messages
+- [ ] Pair programming sessions
+- [ ] Code reviews before merge
 
 ---
 
-**This scope is intentionally small, polished, and achievable within the course timeframe.**
+## 🏁 Definition of Done
 
+### For Pass (G)
+
+- [ ] Working memory game
+- [ ] Node handles game logic
+- [ ] Uses at least one external package
+- [ ] Clean structure and readable code
+
+### For Pass with Distinction (VG)
+
+- [ ] Robust error handling
+- [ ] Modular code structure
+- [ ] Optional persistent data (highscores)
+- [ ] Clear separation of concerns
+
+---
+
+## 📌 Project Pitch (Summary)
+
+A web-based memory game where Node.js functions as the game engine, handling state, logic, and validation, while the client renders the UI and communicates via WebSockets in real time.

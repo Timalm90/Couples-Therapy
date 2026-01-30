@@ -1,0 +1,10 @@
+
+ Couples Therapy
+
+**Concept:**
+A classic *Memory / Concentration* game played in the browser. Cards are laid out face-down. The player flips two cards at a time, trying to find matching pairs.
+
+**Key idea for this assignment:**
+- The **game logic and state live on the Node server**
+- The **browser is only responsible for visuals and interaction**
+- Visual feedback (flip animations, matched states) makes the game engaging
