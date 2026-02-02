@@ -12,15 +12,15 @@ The plan is incremental: at the end of every step, the project still works.
 ## 👥 Roles (Clear but Balanced)
 
 ### **T**
-- Three.js / visuals
-- Client-side logic
-- **Shared backend logic** (game state creation, data structures)
+- [ ] Three.js / visuals
+- [ ] Client-side logic
+- [ ] Shared backend logic (game state creation, data structures)
 
 ### **D**
-- Server infrastructure
-- Core game rules
-- Multiplayer turn logic
-- Error handling
+- [ ] Server infrastructure
+- [ ] Core game rules
+- [ ] Multiplayer turn logic
+- [ ] Error handling
 
 Both write Node code. Neither is “just frontend”.
 
@@ -30,12 +30,12 @@ Both write Node code. Neither is “just frontend”.
 
 **Both T & D (pair programming)**
 
-- Initialize Git repo
-- Create folder structure
-- Add `.gitignore`
-- Install dependencies (`ws`, `nanoid`)
-- Add minimal `index.js`
-- Create empty files according to structure
+- [ ] Initialize Git repo
+- [ ] Create folder structure
+- [ ] Add `.gitignore`
+- [ ] Install dependencies (`ws`, `nanoid`)
+- [ ] Add minimal `index.js`
+- [ ] Create empty files according to structure
 
 ✅ Outcome:
 - Repo builds
@@ -49,12 +49,12 @@ Both write Node code. Neither is “just frontend”.
 
 **File:** `/server/game/createGameState.js`
 
-- Define **card structure**
-- Define **player structure**
-- Generate players (1–4)
-- Assign colors (red, yellow, blue, green)
-- Create card pairs
-- Return initial gameState object
+- [ ] Define card structure
+- [ ] Define player structure
+- [ ] Generate players (1–4)
+- [ ] Assign colors (red, yellow, blue, green)
+- [ ] Create card pairs
+- [ ] Return initial gameState object
 
 Focus: *data modeling*
 
@@ -64,10 +64,10 @@ Focus: *data modeling*
 
 **File:** `/server/game/gameManager.js`
 
-- Store active games (`Map`)
-- Create new game via `createGameState`
-- Fetch game by `gameId`
-- Delete game when finished (optional)
+- [ ] Store active games (`Map`)
+- [ ] Create new game via `createGameState`
+- [ ] Fetch game by `gameId`
+- [ ] Delete game when finished (optional)
 
 Focus: *lifecycle & ownership*
 
@@ -82,8 +82,8 @@ Focus: *lifecycle & ownership*
 
 **File:** `/server/game/shuffle.js`
 
-- Pure shuffle function
-- No side effects
+- [ ] Implement pure shuffle function
+- [ ] Ensure no side effects
 
 ---
 
@@ -91,10 +91,10 @@ Focus: *lifecycle & ownership*
 
 **File:** `/utils/validate.js`
 
-- Validate `cardId`
-- Validate `gameId`
-- Validate player count
-- Guard against invalid moves
+- [ ] Validate `cardId`
+- [ ] Validate `gameId`
+- [ ] Validate player count
+- [ ] Guard against invalid moves
 
 ✅ Outcome:
 - Board is randomized
@@ -112,10 +112,10 @@ This is the **heart of the game**.
 
 **File:** `/server/game/applyMove.js` (part 1)
 
-- Handle **first card flip**
-- Track `flippedCardIds`
-- Prevent duplicate flips
-- Respect `lockBoard`
+- [ ] Handle first card flip
+- [ ] Track `flippedCardIds`
+- [ ] Prevent duplicate flips
+- [ ] Respect `lockBoard`
 
 Focus: *state transitions*
 
@@ -125,16 +125,11 @@ Focus: *state transitions*
 
 **File:** `/server/game/applyMove.js` (part 2)
 
-- Handle **second card flip**
-- Compare cards
-- Match logic:
-  - update `isMatched`
-  - increment score
-  - keep turn
-- No-match logic:
-  - lock board
-  - advance active player
-- Detect win condition
+- [ ] Handle second card flip
+- [ ] Compare cards
+- [ ] Match logic (update `isMatched`, increment score, keep turn)
+- [ ] No-match logic (lock board, advance active player)
+- [ ] Detect win condition
 
 Focus: *rules & multiplayer logic*
 
@@ -149,19 +144,18 @@ Focus: *rules & multiplayer logic*
 
 **File:** `/server/createServer.js`
 
-- HTTP server
-- WebSocket server (`ws`)
-- Handle messages:
-  - `NEW_GAME`
-  - `FLIP_CARD`
-- Send sanitized `GAME_STATE`
+- [ ] Create HTTP server
+- [ ] Create WebSocket server (`ws`)
+- [ ] Handle `NEW_GAME`
+- [ ] Handle `FLIP_CARD`
+- [ ] Send sanitized `GAME_STATE`
 
 ---
 
 ### **T assists**
 
-- Define message schemas
-- Ensure no card values are leaked
+- [ ] Define message schemas
+- [ ] Verify no card values are leaked
 
 ✅ Outcome:
 - Backend fully playable via messages
@@ -174,17 +168,17 @@ Focus: *rules & multiplayer logic*
 
 **File:** `/public/client.js`
 
-- WebSocket connection
-- Send actions to server
-- Receive `GAME_STATE`
-- Dispatch updates to UI / scene
+- [ ] Create WebSocket connection
+- [ ] Send actions to server
+- [ ] Receive `GAME_STATE`
+- [ ] Dispatch updates to UI / scene
 
 ---
 
 ### **D reviews**
 
-- Ensure protocol correctness
-- Check edge cases
+- [ ] Verify protocol correctness
+- [ ] Check edge cases
 
 ✅ Outcome:
 - Client talks to server correctly
@@ -195,20 +189,15 @@ Focus: *rules & multiplayer logic*
 
 ### **T implements**
 
-- `scene.js`
-  - scene, camera, lights
-- `cards.js`
-  - base card mesh
-  - cloning
-  - grid generation
-- `animations.js`
-  - flip animations
+- [ ] `scene.js` (scene, camera, lights)
+- [ ] `cards.js` (base card mesh, cloning, grid)
+- [ ] `animations.js` (flip animations)
 
 ---
 
 ### **D supports**
 
-- Test state → visual mapping
+- [ ] Test state → visual mapping
 
 ✅ Outcome:
 - Clickable 3D board
@@ -219,14 +208,14 @@ Focus: *rules & multiplayer logic*
 
 ### **T implements**
 
-- Scene background color per active player
-- Player score UI (`ui.js`)
+- [ ] Scene background color per active player
+- [ ] Player score UI (`ui.js`)
 
 ---
 
 ### **D verifies**
 
-- Turn logic correctness
+- [ ] Turn logic correctness
 
 ✅ Outcome:
 - Clear multiplayer UX
@@ -237,16 +226,16 @@ Focus: *rules & multiplayer logic*
 
 ### **D implements**
 
-- Invalid cardId
-- Clicking while locked
-- Disconnect handling
+- [ ] Invalid cardId handling
+- [ ] Clicking while locked
+- [ ] WebSocket disconnect handling
 
 ---
 
 ### **T implements**
 
-- Visual error feedback
-- Disable input during locks
+- [ ] Visual error feedback
+- [ ] Disable input during locks
 
 ✅ Outcome:
 - No crashes
@@ -256,29 +245,27 @@ Focus: *rules & multiplayer logic*
 ## 🪜 STEP 9 – Optional VG Work (If Time)
 
 ### **T**
-- Difficulty selector
-- Visual polish
+
+- [ ] Difficulty selector
+- [ ] Visual polish
 
 ### **D**
-- Highscores (`fs`)
-- Timer
+
+- [ ] Highscores (`fs`)
+- [ ] Timer
 
 ---
 
 ## ✅ Final Balance Check
 
-- **Backend files touched by T:**
-  - createGameState.js
-  - shuffle.js
-  - applyMove.js (half)
-
-- **Backend files touched by D:**
-  - gameManager.js
-  - applyMove.js (half)
-  - createServer.js
-  - validate.js
+- [ ] T implemented backend: `createGameState.js`, `shuffle.js`, part of `applyMove.js`
+- [ ] D implemented backend: `gameManager.js`, part of `applyMove.js`, `createServer.js`, `validate.js`
 
 👉 Backend workload is **evenly split**.
 
 ---
+
+## 🧠 Golden Rule
+
+> Server decides truth. Client visualizes truth.
 
