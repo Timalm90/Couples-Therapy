@@ -181,6 +181,129 @@ Each game should store:
 
 ---
 
-## 📌 Project Pitch (Summary)
+## Project Pitch (Summary)
 
 A web-based memory game where Node.js functions as the game engine, handling state, logic, and validation, while the client renders the UI and communicates via WebSockets in real time.
+
+Couples-Therapy/
+│
+├── index.js
+├── package.json
+├── package-lock.json
+├── .gitignore
+├── README.md
+├── project_plan.md
+│
+├── server/
+│ ├── createServer.js
+│ └── game/
+│ ├── gameManager.js
+│ ├── createGameState.js
+│ ├── applyMove.js
+│ └── shuffle.js
+│
+├── public/
+│ ├── index.html
+│ ├── style.css
+│ └── client.js
+│
+├── utils/
+│ └── validate.js
+│
+└── data/
+└── highscores.json (optional, VG)
+
+Vad varje del gör
+
+Root (översta nivån)
+
+Här ska det bara ligga grundgrejer:
+
+index.js
+
+→ startpunkt för appen (startar servern)
+
+package.json / package-lock.json
+
+→ dependencies (ws, nanoid)
+
+.gitignore
+
+→ ignorerar node_modules
+
+README.md
+
+→ hur man startar projektet
+project_plan.md
+
+🧩 /server – backend / Node-logik
+
+Här ligger allt som har med Node att göra.
+
+createServer.js
+Ansvar:
+skapa HTTP-server
+starta WebSocket (ws)
+koppla ihop frontend ↔ backend
+
+Ingen spellogik här, bara “infrastruktur”.
+
+/server/game – spelmotorn (det viktiga)
+
+Här bor hela memory-spelets hjärna.
+
+gameManager.js
+håller koll på alla spel
+mappar gameId → gameState
+skapar nytt spel
+hämtar befintligt spel
+
+createGameState.js
+skapar en ny kortlek
+duplicerar par
+sätter startvärden (attempts, status osv)
+shuffle.js
+blandar korten
+separat fil = ren kod + DRY
+
+applyMove.js
+körs när någon klickar på ett kort
+avgör:
+match / no match
+låser brädet
+uppdaterar state
+vinst
+👉 Det här är kärnan i hela projektet.
+
+/public – frontend
+Allt som körs i webbläsaren.
+index.html
+layout
+game container
+buttons / counters
+style.css
+grid
+kort
+flipped / matched states
+
+client.js
+WebSocket-connection
+skickar FLIP_CARD
+tar emot GAME_STATE
+uppdaterar UI
+👉 Frontend ska vara ”dum” – bara visa det servern säger.
+
+/utils – hjälpfunktioner
+Små funktioner som används på flera ställen.
+
+validate.js
+kontrollera input
+giltigt cardId
+giltigt gameId
+skydd mot konstiga klick
+
+/data (valfritt – VG)
+highscores.json
+sparar bästa tider / försök
+läses & skrivs med fs
+Om ni inte gör highscores än → mappen kan vänta.
