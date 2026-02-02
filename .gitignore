@@ -2,3 +2,5 @@
 .env
 node_modules/
 T_Checklist.md
+.DS_Store
+/server.js/.DS_Store
