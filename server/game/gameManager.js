@@ -15,6 +15,11 @@ export function getGame(gameId) {
   return games.get(gameId) ?? null;
 }
 
+// Update an existing game's state
+export function updateGame(gameId, newState) {
+  games.set(gameId, newState);
+}
+
 // Remove a game (e.g. when finished or reset)
 export function deleteGame(gameId) {
   return games.delete(gameId);

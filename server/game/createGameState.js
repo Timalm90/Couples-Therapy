@@ -2,18 +2,13 @@
 import { nanoid } from 'nanoid';
 import shuffle from './shuffle.js';
 
-/**
- * Creates a new game state with players and shuffled cards
- * @param {number} playerCount - Number of players (1-4)
- * @returns {object} Complete game state
- */
 export default function createGameState(playerCount = 1) {
-  // Validate player count
-  if (playerCount < 1 || playerCount > 4) {
+
+    if (playerCount < 1 || playerCount > 4) {
     throw new Error('Player count must be between 1 and 4');
   }
 
-  // Player colors in order
+  // Player colors
   const colors = ['red', 'yellow', 'blue', 'green'];
 
   // Create players

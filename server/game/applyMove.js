@@ -104,7 +104,7 @@ export default function applyMove(
 
   // ===== NO MATCH =====
   // Keep active player the same while the two cards are visible.
-  // Lock the board and let caller schedule unlockBoardAfterNoMatch() after delay.
+  // Lock the board and let caller schedule unlockBoard() after delay.
 
   return {
     gameState: {
@@ -117,7 +117,13 @@ export default function applyMove(
   };
 }
 
-export function unlockBoardAfterNoMatch(gameState) {
+/**
+ * Unlocks the board and clears flipped cards after a mismatch delay
+ * Advances to the next player
+ * @param {object} gameState - Current game state
+ * @returns {object} Updated game state with board unlocked
+ */
+export function unlockBoard(gameState) {
   const nextPlayerIndex =
     (gameState.activePlayerIndex + 1) % gameState.players.length;
 
