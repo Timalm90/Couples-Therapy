@@ -49,14 +49,14 @@ export default function createServer(port = 3000) {
   const wss = new WebSocketServer({ server: httpServer });
   
   wss.on('connection', (ws) => {
-    console.log('🔌 Client connected');
+    console.log('Client connected');
     
     let currentGameId = null;
     
     ws.on('message', (data) => {
       try {
         const message = JSON.parse(data);
-        console.log('📨 Received:', message.type);
+        console.log('Received:', message.type);
         
         // ===== HANDLE NEW_GAME =====
         if (message.type === 'NEW_GAME') {
@@ -74,7 +74,7 @@ export default function createServer(port = 3000) {
           const gameState = gameManager.createGame(validation.playerCount);
           currentGameId = gameState.gameId;
           
-          console.log(`🎮 New game created: ${currentGameId} with ${validation.playerCount} player(s)`);
+          console.log(`New game created: ${currentGameId} with ${validation.playerCount} player(s)`);
           
           // Send sanitized game state
           sendGameState(ws, gameState);
@@ -156,7 +156,7 @@ export default function createServer(port = 3000) {
     });
     
     ws.on('close', () => {
-      console.log('🔌 Client disconnected');
+      console.log('Client disconnected');
       // Optional: Clean up game if needed
       // gameManager.deleteGame(currentGameId);
     });
@@ -168,7 +168,7 @@ export default function createServer(port = 3000) {
   
   // Start server
   httpServer.listen(port, () => {
-    console.log(`🚀 Server running on http://localhost:${port}`);
+    console.log(`Server running on http://localhost:${port}`);
   });
   
   return { httpServer, wss };
