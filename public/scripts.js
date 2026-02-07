@@ -141,9 +141,7 @@ function updateActivePlayerBackground(gameState) {
   if (!grid) return;
 
   const activePlayer = gameState.players[gameState.activePlayerIndex];
-    grid.style.backgroundColor = activePlayer.color;
-
-
+  grid.style.backgroundColor = activePlayer.color;
 }
 
 gameClient.onGameStateUpdate = (gameState) => {
@@ -153,4 +151,70 @@ gameClient.onGameStateUpdate = (gameState) => {
   updateGameInfo(gameState);
   updateActivePlayerBackground(gameState);
   renderCards(gameState);
+
+  if (gameState.status === "won") {
+    showWinPopup(gameState);
+  }
 };
+
+let hasShownWinPopupForGameId = null;
+
+function getWinners(gameState) {
+  const maxScore = Math.max(...gameState.players.map((p) => p.score));
+  const winners = gameState.players.filter((p) => p.score === maxScore);
+  return { winners, maxScore };
+}
+
+function showWinPopup(gameState) {
+  if (hasShownWinPopupForGameId === gameState.gameId) return;
+  hasShownWinPopupForGameId = gameState.gameId;
+
+  const { winners, maxScore } = getWinners(gameState);
+  const isDraw = winners.length > 1;
+
+  const title = isDraw ? "🤝 It's a draw!" : "🏆 We have a winner!";
+  const winnerText = isDraw
+    ? `Winners: ${winners.map((w) => w.color).join(", ")} (all with ${maxScore} points)`
+    : `Winner: ${winners[0].color} with ${maxScore} points!`;
+
+  const scoreText = gameState.players
+    .map((p) => `${p.color}: ${p.score}`)
+    .join(" • ");
+
+  const overlay = document.createElement("div");
+  overlay.className = "win-overlay";
+  overlay.innerHTML = `
+    <div class="win-modal">
+      <div class="confetti" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+
+      <div class="win-title">${title}</div>
+      <div class="win-text">${winnerText}</div>
+      <div class="win-scores">${scoreText}</div>
+
+      <div class="win-buttons">
+        <button class="win-btn secondary" id="closeWinModal">Close</button>
+        <button class="win-btn primary" id="playAgainBtn">Play again</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Close on click outside
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  // Close button
+  overlay.querySelector("#closeWinModal").addEventListener("click", () => {
+    overlay.remove();
+  });
+
+  // Play again (defaults to same player count)
+  overlay.querySelector("#playAgainBtn").addEventListener("click", () => {
+    overlay.remove();
+    window.startGame(gameState.players.length);
+  });
+}

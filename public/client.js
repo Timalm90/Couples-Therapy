@@ -1,14 +1,13 @@
-
 class GameClient {
   constructor() {
     this.ws = null;
     this.gameId = null;
     this.isConnected = false;
-    
+
     // Callbacks that other modules can set
-    this.onGameStateUpdate = null;  // Called when server sends GAME_STATE
-    this.onError = null;             // Called when server sends ERROR
-    this.onConnectionChange = null;  // Called when connection status changes
+    this.onGameStateUpdate = null; // Called when server sends GAME_STATE
+    this.onError = null; // Called when server sends ERROR
+    this.onConnectionChange = null; // Called when connection status changes
   }
 
   /**
@@ -16,16 +15,18 @@ class GameClient {
    * @param {string} url - WebSocket URL (default: ws://localhost:8000)
    */
 
-  connect(url = 'ws://localhost:8000') {
-    console.log('Connecting to server...');
-    
+  connect(url) {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const host = window.location.host; // couples-therapy-oyua.onrender.com
+    const wsUrl = url ?? `${protocol}//${host}`;
+
     this.ws = new WebSocket(url);
 
     // ===== CONNECTION OPENED =====
     this.ws.onopen = () => {
-      console.log('Connected to server');
+      console.log("Connected to server");
       this.isConnected = true;
-      
+
       if (this.onConnectionChange) {
         this.onConnectionChange(true);
       }
@@ -35,31 +36,31 @@ class GameClient {
     this.ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-        console.log('Received:', message.type);
+        console.log("Received:", message.type);
 
         // Handle different message types
         switch (message.type) {
-          case 'GAME_STATE':
+          case "GAME_STATE":
             this.handleGameState(message);
             break;
 
-          case 'ERROR':
+          case "ERROR":
             this.handleError(message);
             break;
 
           default:
-            console.warn('Unknown message type:', message.type);
+            console.warn("Unknown message type:", message.type);
         }
       } catch (error) {
-        console.error('❌ Error parsing message:', error);
+        console.error("❌ Error parsing message:", error);
       }
     };
 
     // ===== CONNECTION CLOSED =====
     this.ws.onclose = () => {
-      console.log('Disconnected from server');
+      console.log("Disconnected from server");
       this.isConnected = false;
-      
+
       if (this.onConnectionChange) {
         this.onConnectionChange(false);
       }
@@ -67,7 +68,7 @@ class GameClient {
 
     // ===== CONNECTION ERROR =====
     this.ws.onerror = (error) => {
-      console.error('❌ WebSocket error:', error);
+      console.error("❌ WebSocket error:", error);
     };
   }
 
@@ -79,7 +80,7 @@ class GameClient {
     // Store gameId when we first receive it
     if (message.gameId && !this.gameId) {
       this.gameId = message.gameId;
-      console.log('Game ID:', this.gameId);
+      console.log("Game ID:", this.gameId);
     }
 
     // Forward to UI/scene via callback
@@ -93,8 +94,8 @@ class GameClient {
    * @param {object} message - Error message
    */
   handleError(message) {
-    console.error('⚠️ Server error:', message.message);
-    
+    console.error("⚠️ Server error:", message.message);
+
     // Forward to error handler via callback
     if (this.onError) {
       this.onError(message.message);
@@ -107,15 +108,15 @@ class GameClient {
    */
   startNewGame(playerCount = 1) {
     if (!this.isConnected) {
-      console.error('❌ Not connected to server');
+      console.error("❌ Not connected to server");
       return;
     }
 
-    console.log('Starting new game with', playerCount, 'player(s)');
-    
+    console.log("Starting new game with", playerCount, "player(s)");
+
     const message = {
-      type: 'NEW_GAME',
-      playerCount: playerCount
+      type: "NEW_GAME",
+      playerCount: playerCount,
     };
 
     this.ws.send(JSON.stringify(message));
@@ -127,21 +128,21 @@ class GameClient {
    */
   flipCard(cardId) {
     if (!this.isConnected) {
-      console.error('❌ Not connected to server');
+      console.error("❌ Not connected to server");
       return;
     }
 
     if (!this.gameId) {
-      console.error('❌ No active game');
+      console.error("❌ No active game");
       return;
     }
 
-    console.log('Flipping card:', cardId);
-    
+    console.log("Flipping card:", cardId);
+
     const message = {
-      type: 'FLIP_CARD',
+      type: "FLIP_CARD",
       gameId: this.gameId,
-      cardId: cardId
+      cardId: cardId,
     };
 
     this.ws.send(JSON.stringify(message));

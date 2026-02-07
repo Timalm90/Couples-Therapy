@@ -1,112 +1,306 @@
+body {
+  font-family: Arial, sans-serif;
+  max-width: 800px;
+  margin: 50px auto;
+  padding: 20px;
+  background: #1a1a1a;
+  color: #fff;
+}
 
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: 50px auto;
-      padding: 20px;
-      background: #1a1a1a;
-      color: #fff;
-    }
-    
-    h1 {
-      color: #4CAF50;
-    }
-    
-    .controls {
-      margin: 20px 0;
-      padding: 20px;
-      background: #2a2a2a;
-      border-radius: 8px;
-    }
-    
-    button {
-      padding: 10px 20px;
-      margin: 5px;
-      font-size: 16px;
-      cursor: pointer;
-      background: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 4px;
-    }
-    
-    button:hover {
-      background: #45a049;
-    }
-    
-    button:disabled {
-      background: #666;
-      cursor: not-allowed;
-    }
-    
-    .status {
-      padding: 15px;
-      margin: 10px 0;
-      background: #333;
-      border-radius: 4px;
-      font-family: monospace;
-    }
-    
-    .status.connected {
-      border-left: 4px solid #4CAF50;
-    }
-    
-    .status.disconnected {
-      border-left: 4px solid #f44336;
-    }
-    
-    .game-info {
-      margin: 20px 0;
-      padding: 15px;
-      background: #2a2a2a;
-      border-radius: 8px;
-    }
-    
-    .error {
-      padding: 10px;
-      margin: 10px 0;
-      background: #f44336;
-      border-radius: 4px;
-    }
-    
-    #cardGrid {
-      transition: background-color 0.4s ease;
-      display: grid;
-      grid-template-columns: repeat(4, .05fr);
-      justify-content: center;
-      gap: 20px;
-      margin: 10%;
-      padding: 10%;
-      border-radius: 20px;
-    }
-    
-    .card {
-        width: 100px;
-        height: 100px;
-        aspect-ratio: 1;
-      background: #3a3a3a;
-      border: 2px solid #555;
-      border-radius: 8px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      transition: all 0.3s;
-    }
-    
-    .card:hover {
-      background: #4a4a4a;
-      transform: scale(1.05);
-    }
-    
-    .card.faceup {
-      background: #4CAF50;
-      border-color: #4CAF50;
-    }
-    
-    .card.matched {
-      background: #2196F3;
-      border-color: #2196F3;
-      cursor: default;
-    }
+h1 {
+  color: #4caf50;
+}
+
+.controls {
+  margin: 20px 0;
+  padding: 20px;
+  background: #2a2a2a;
+  border-radius: 8px;
+}
+
+button {
+  padding: 10px 20px;
+  margin: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+
+button:hover {
+  background: #45a049;
+}
+
+button:disabled {
+  background: #666;
+  cursor: not-allowed;
+}
+
+.status {
+  padding: 15px;
+  margin: 10px 0;
+  background: #333;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.status.connected {
+  border-left: 4px solid #4caf50;
+}
+
+.status.disconnected {
+  border-left: 4px solid #f44336;
+}
+
+.game-info {
+  margin: 20px 0;
+  padding: 15px;
+  background: #2a2a2a;
+  border-radius: 8px;
+}
+
+.error {
+  padding: 10px;
+  margin: 10px 0;
+  background: #f44336;
+  border-radius: 4px;
+}
+
+#cardGrid {
+  transition: background-color 0.4s ease;
+  display: grid;
+  grid-template-columns: repeat(4, 0.05fr);
+  justify-content: center;
+  gap: 20px;
+  margin: 10%;
+  padding: 10%;
+  border-radius: 20px;
+}
+
+.card {
+  width: 100px;
+  height: 100px;
+  aspect-ratio: 1;
+  background: #3a3a3a;
+  border: 2px solid #555;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  transition: all 0.3s;
+}
+
+.card:hover {
+  background: #4a4a4a;
+  transform: scale(1.05);
+}
+
+.card.faceup {
+  background: #4caf50;
+  border-color: #4caf50;
+}
+
+.card.matched {
+  background: #2196f3;
+  border-color: #2196f3;
+  cursor: default;
+}
+
+/* ===== WIN MODAL ===== */
+.win-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.win-modal {
+  width: min(420px, 92vw);
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.win-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: black;
+}
+
+.win-text {
+  font-size: 16px;
+  margin-bottom: 10px;
+  color: black;
+}
+
+.win-scores {
+  font-size: 14px;
+  color: #444;
+  margin-bottom: 14px;
+}
+
+.win-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.win-btn {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.win-btn.primary {
+  background: #111;
+  color: white;
+}
+
+.win-btn.secondary {
+  background: #eee;
+  color: #111;
+}
+
+/* ===== SIMPLE CONFETTI (MORE OF IT) ===== */
+.confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.confetti i {
+  position: absolute;
+  top: -20px;
+  width: 8px;
+  height: 16px;
+  opacity: 0.9;
+  border-radius: 3px;
+  animation-name: confettiFall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* Position + color + speed */
+.confetti i:nth-child(1) {
+  left: 5%;
+  background: #ff3b30;
+  animation-duration: 1200ms;
+}
+.confetti i:nth-child(2) {
+  left: 10%;
+  background: #ffcc00;
+  animation-duration: 1500ms;
+}
+.confetti i:nth-child(3) {
+  left: 15%;
+  background: #34c759;
+  animation-duration: 1300ms;
+}
+.confetti i:nth-child(4) {
+  left: 20%;
+  background: #007aff;
+  animation-duration: 1600ms;
+}
+.confetti i:nth-child(5) {
+  left: 25%;
+  background: #af52de;
+  animation-duration: 1400ms;
+}
+.confetti i:nth-child(6) {
+  left: 30%;
+  background: #ff2d55;
+  animation-duration: 1700ms;
+}
+.confetti i:nth-child(7) {
+  left: 35%;
+  background: #ff3b30;
+  animation-duration: 1500ms;
+}
+.confetti i:nth-child(8) {
+  left: 40%;
+  background: #ffcc00;
+  animation-duration: 1250ms;
+}
+.confetti i:nth-child(9) {
+  left: 45%;
+  background: #34c759;
+  animation-duration: 1650ms;
+}
+.confetti i:nth-child(10) {
+  left: 50%;
+  background: #007aff;
+  animation-duration: 1450ms;
+}
+.confetti i:nth-child(11) {
+  left: 55%;
+  background: #af52de;
+  animation-duration: 1550ms;
+}
+.confetti i:nth-child(12) {
+  left: 60%;
+  background: #ff2d55;
+  animation-duration: 1350ms;
+}
+.confetti i:nth-child(13) {
+  left: 65%;
+  background: #ff3b30;
+  animation-duration: 1700ms;
+}
+.confetti i:nth-child(14) {
+  left: 70%;
+  background: #ffcc00;
+  animation-duration: 1400ms;
+}
+.confetti i:nth-child(15) {
+  left: 75%;
+  background: #34c759;
+  animation-duration: 1600ms;
+}
+.confetti i:nth-child(16) {
+  left: 80%;
+  background: #007aff;
+  animation-duration: 1300ms;
+}
+.confetti i:nth-child(17) {
+  left: 85%;
+  background: #af52de;
+  animation-duration: 1500ms;
+}
+.confetti i:nth-child(18) {
+  left: 90%;
+  background: #ff2d55;
+  animation-duration: 1450ms;
+}
+.confetti i:nth-child(19) {
+  left: 95%;
+  background: #ff3b30;
+  animation-duration: 1650ms;
+}
+.confetti i:nth-child(20) {
+  left: 98%;
+  background: #ffcc00;
+  animation-duration: 1550ms;
+}
+
+@keyframes confettiFall {
+  from {
+    transform: translateY(-20px) rotate(0deg);
+  }
+  to {
+    transform: translateY(320px) rotate(360deg);
+  }
+}
