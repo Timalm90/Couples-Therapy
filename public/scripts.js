@@ -164,8 +164,32 @@ function getWinners(gameState) {
   const winners = gameState.players.filter((p) => p.score === maxScore);
   return { winners, maxScore };
 }
+// Template loading and safe insertion helpers
+let winTemplatePromise = null;
+function getWinTemplate() {
+  if (!winTemplatePromise) {
+    winTemplatePromise = fetch("/win-modal.html").then((r) => {
+      if (!r.ok) throw new Error("Failed to load win modal template");
+      return r.text();
+    });
+  }
+  return winTemplatePromise;
+}
 
-function showWinPopup(gameState) {
+function escapeHTML(str) {
+  return String(str).replace(/[&<>"']/g, (c) => {
+    return {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    }[c];
+  });
+}
+
+// POPUP window after a game
+async function showWinPopup(gameState) {
   if (hasShownWinPopupForGameId === gameState.gameId) return;
   hasShownWinPopupForGameId = gameState.gameId;
 
@@ -183,22 +207,17 @@ function showWinPopup(gameState) {
 
   const overlay = document.createElement("div");
   overlay.className = "win-overlay";
-  overlay.innerHTML = `
-    <div class="win-modal">
-      <div class="confetti" aria-hidden="true">
-        <i></i><i></i><i></i><i></i><i></i><i></i>
-      </div>
 
-      <div class="win-title">${title}</div>
-      <div class="win-text">${winnerText}</div>
-      <div class="win-scores">${scoreText}</div>
-
-      <div class="win-buttons">
-        <button class="win-btn secondary" id="closeWinModal">Close</button>
-        <button class="win-btn primary" id="playAgainBtn">Play again</button>
-      </div>
-    </div>
-  `;
+  try {
+    const template = await getWinTemplate();
+    const html = template
+      .replace(/{{\s*title\s*}}/g, escapeHTML(title))
+      .replace(/{{\s*winnerText\s*}}/g, escapeHTML(winnerText))
+      .replace(/{{\s*scoreText\s*}}/g, escapeHTML(scoreText));
+    overlay.innerHTML = html;
+  } catch (err) {
+    overlay.innerHTML = `<div class="win-modal"><div class="win-title">${escapeHTML(title)}</div><div class="win-text">${escapeHTML(winnerText)}</div><div class="win-scores">${escapeHTML(scoreText)}</div></div>`;
+  }
 
   document.body.appendChild(overlay);
 
@@ -208,13 +227,14 @@ function showWinPopup(gameState) {
   });
 
   // Close button
-  overlay.querySelector("#closeWinModal").addEventListener("click", () => {
-    overlay.remove();
-  });
+  const closeBtn = overlay.querySelector("#closeWinModal");
+  if (closeBtn) closeBtn.addEventListener("click", () => overlay.remove());
 
   // Play again (defaults to same player count)
-  overlay.querySelector("#playAgainBtn").addEventListener("click", () => {
-    overlay.remove();
-    window.startGame(gameState.players.length);
-  });
+  const playBtn = overlay.querySelector("#playAgainBtn");
+  if (playBtn)
+    playBtn.addEventListener("click", () => {
+      overlay.remove();
+      window.startGame(gameState.players.length);
+    });
 }
