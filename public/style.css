@@ -248,6 +248,62 @@ button:disabled {
   }
 }
 
+
+/* =========================
+   Card Grid
+   ========================= */
+
+#cardGrid {
+  transition: background-color 0.4s ease;
+  display: grid;
+  grid-template-columns: 1fr; /* single-cell grid to host full canvas */
+  gap: clamp(10px, 2vw, 18px);
+  padding: clamp(12px, 2vw, 20px);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 1200px;
+  min-height: 72vh; /* large area for the 3D scene */
+  margin: 0 auto;
+}
+
+.card {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #3a3a3a;
+  border: 2px solid #555;
+  border-radius: 8px;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: clamp(18px, 4vw, 28px);
+  transition: all 0.3s;
+}
+
+.card:hover {
+  background: #4a4a4a;
+  transform: scale(1.05);
+}
+
+.card.faceup {
+  background: #4caf50;
+  border-color: #4caf50;
+}
+
+.card.matched {
+  background: #2196f3;
+  border-color: #2196f3;
+  cursor: default;
+}
+
+
+
+
+
+
+
 /* Mobile (stack layout) */
 
 @media (max-width: 820px) {
@@ -271,3 +327,7 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+
+
+

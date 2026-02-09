@@ -1,14 +1,25 @@
-import gameClient from "./client.js";
+import gameClient from "../client.js";
 import {
   launchFullscreenConfetti,
   stopFullscreenConfetti,
-} from "./animations.js";
+} from "../animations.js";
+import { initScene, updateFromGameState } from "../scene.js";
 
 // ===== GAME STATE =====
 let currentGameState = null;
 
 // ===== CONNECT TO SERVER =====
 gameClient.connect();
+
+// Initialize Three.js scene and wire clicks -> flip messages
+initScene((cardId) => {
+  if (
+    !currentGameState ||
+    currentGameState.status !== "playing"
+  ) return;
+
+  gameClient.flipCard(cardId);
+});
 
 // ===== CONNECTION STATUS =====
 gameClient.onConnectionChange = (isConnected) => {
@@ -24,17 +35,7 @@ gameClient.onConnectionChange = (isConnected) => {
   }
 };
 
-// ===== GAME STATE UPDATE =====
-gameClient.onGameStateUpdate = (gameState) => {
-  console.log("Game state:", gameState);
-  currentGameState = gameState;
-
-  // Update game info
-  updateGameInfo(gameState);
-
-  // Render cards
-  renderCards(gameState);
-};
+// (handler consolidated later)
 
 // ===== ERROR HANDLING =====
 gameClient.onError = (errorMessage) => {
@@ -58,6 +59,7 @@ function updateGameInfo(gameState) {
     .join(" | ");
 
   const isDebug = false; // ändra till true vid behov
+
 
   info.innerHTML = `
   ${isDebug ? `<strong>Game ID:</strong> ${gameState.gameId}<br>` : ""}
@@ -126,8 +128,19 @@ window.startGame = (playerCount) => {
   // Clear the card grid while waiting for new game
   const grid = document.getElementById("cardGrid");
   if (grid) {
-    grid.innerHTML =
-      '<p style="text-align: center; color: #888;">Starting new game...</p>';
+    // Add a lightweight placeholder so we don't remove the Three.js canvas
+    let ph = document.getElementById('startingPlaceholder');
+    if (!ph) {
+      ph = document.createElement('div');
+      ph.id = 'startingPlaceholder';
+      ph.style.textAlign = 'center';
+      ph.style.color = '#888';
+      ph.textContent = 'Starting new game...';
+      grid.appendChild(ph);
+    } else {
+      ph.textContent = 'Starting new game...';
+      ph.style.display = 'block';
+    }
   }
 
   // Clear game info
@@ -159,7 +172,13 @@ gameClient.onGameStateUpdate = (gameState) => {
 
   updateGameInfo(gameState);
   updateActivePlayerBackground(gameState);
-  renderCards(gameState);
+  // Try to update 3D scene; fall back to DOM grid rendering if it fails
+  try {
+    updateFromGameState(gameState);
+  } catch (err) {
+    console.warn('3D update failed, falling back to DOM rendering:', err);
+    renderCards(gameState);
+  }
 
   if (gameState.status === "won") {
     showWinPopup(gameState);
