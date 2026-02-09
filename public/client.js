@@ -20,7 +20,8 @@ class GameClient {
     const host = window.location.host; // couples-therapy-oyua.onrender.com
     const wsUrl = url ?? `${protocol}//${host}`;
 
-    this.ws = new WebSocket(url);
+    console.log("Connecting to server:", wsUrl);
+    this.ws = new WebSocket(wsUrl);
 
     // ===== CONNECTION OPENED =====
     this.ws.onopen = () => {

@@ -1,4 +1,8 @@
 import gameClient from "./client.js";
+import {
+  launchFullscreenConfetti,
+  stopFullscreenConfetti,
+} from "./animations.js";
 
 // ===== GAME STATE =====
 let currentGameState = null;
@@ -164,6 +168,7 @@ function getWinners(gameState) {
   const winners = gameState.players.filter((p) => p.score === maxScore);
   return { winners, maxScore };
 }
+
 // Template loading and safe insertion helpers
 let winTemplatePromise = null;
 function getWinTemplate() {
@@ -189,14 +194,25 @@ function escapeHTML(str) {
 }
 
 // POPUP window after a game
-async function showWinPopup(gameState) {
+function showWinPopup(gameState) {
   if (hasShownWinPopupForGameId === gameState.gameId) return;
   hasShownWinPopupForGameId = gameState.gameId;
+
+  // Start fullscreen confetti (looping)
+  try {
+    if (typeof launchFullscreenConfetti === "function") {
+      launchFullscreenConfetti(160);
+    }
+  } catch (err) {
+    console.warn("Confetti failed:", err);
+  }
 
   const { winners, maxScore } = getWinners(gameState);
   const isDraw = winners.length > 1;
 
-  const title = isDraw ? "🤝 It's a draw!" : "🏆 We have a winner!";
+  const title = isDraw
+    ? "🤝 It's a draw, you need more therapy!"
+    : "🏆 We have a winner of Couples Therapy!";
   const winnerText = isDraw
     ? `Winners: ${winners.map((w) => w.color).join(", ")} (all with ${maxScore} points)`
     : `Winner: ${winners[0].color} with ${maxScore} points!`;
@@ -207,34 +223,51 @@ async function showWinPopup(gameState) {
 
   const overlay = document.createElement("div");
   overlay.className = "win-overlay";
+  overlay.innerHTML = `
+    <div class="win-modal">
+      <div class="win-title">${escapeHTML(title)}</div>
+      <div class="win-text">${escapeHTML(winnerText)}</div>
+      <div class="win-scores">${escapeHTML(scoreText)}</div>
 
-  try {
-    const template = await getWinTemplate();
-    const html = template
-      .replace(/{{\s*title\s*}}/g, escapeHTML(title))
-      .replace(/{{\s*winnerText\s*}}/g, escapeHTML(winnerText))
-      .replace(/{{\s*scoreText\s*}}/g, escapeHTML(scoreText));
-    overlay.innerHTML = html;
-  } catch (err) {
-    overlay.innerHTML = `<div class="win-modal"><div class="win-title">${escapeHTML(title)}</div><div class="win-text">${escapeHTML(winnerText)}</div><div class="win-scores">${escapeHTML(scoreText)}</div></div>`;
-  }
+      <div class="win-buttons">
+        <button class="win-btn secondary" id="closeWinModal">Close</button>
+        <button class="win-btn primary" id="playAgainBtn">Play again</button>
+      </div>
+    </div>
+  `;
 
   document.body.appendChild(overlay);
 
+  // One place to close popup + stop confetti
+  const closePopup = () => {
+    overlay.remove();
+
+    try {
+      // Stop confetti if function exists
+      if (typeof stopFullscreenConfetti === "function") {
+        stopFullscreenConfetti();
+      } else {
+        // Fallback: remove screen if stop function is not available
+        document.querySelector(".confetti-screen")?.remove();
+      }
+    } catch (err) {
+      console.warn("Stopping confetti failed:", err);
+    }
+  };
+
   // Close on click outside
   overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) overlay.remove();
+    if (e.target === overlay) closePopup();
   });
 
   // Close button
-  const closeBtn = overlay.querySelector("#closeWinModal");
-  if (closeBtn) closeBtn.addEventListener("click", () => overlay.remove());
+  overlay
+    .querySelector("#closeWinModal")
+    ?.addEventListener("click", closePopup);
 
   // Play again (defaults to same player count)
-  const playBtn = overlay.querySelector("#playAgainBtn");
-  if (playBtn)
-    playBtn.addEventListener("click", () => {
-      overlay.remove();
-      window.startGame(gameState.players.length);
-    });
+  overlay.querySelector("#playAgainBtn")?.addEventListener("click", () => {
+    closePopup();
+    window.startGame(gameState.players.length);
+  });
 }
