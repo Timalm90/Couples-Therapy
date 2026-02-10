@@ -235,11 +235,11 @@ function showWinPopup(gameState) {
   const isDraw = winners.length > 1;
 
   const title = isDraw
-    ? "🤝 It's a draw, you need more therapy!"
-    : "🏆 We have a winner of Couples Therapy!";
+    ? "It's a draw, you need more therapy!"
+    : ` Congratulation ${winners.map((w) => w.color)}! You are the winner of Couples Therapy!`;
   const winnerText = isDraw
-    ? `Winners: ${winners.map((w) => w.color).join(", ")} (all with ${maxScore} points)`
-    : `Winner: ${winners[0].color} with ${maxScore} points!`;
+    ? ``
+    : ``;
 
   const scoreText = gameState.players
     .map((p) => `${p.color}: ${p.score}`)

@@ -2,7 +2,8 @@
 // Exports: initScene(onCardClick) and updateFromGameState(gameState)
 
 import * as THREE from 'https://esm.sh/three@0.152.2';
-import { GLTFLoader } from 'https://esm.sh/three@0.152.2/examples/jsm/loaders/GLTFLoader.js';
+import { FBXLoader } from 'https://esm.sh/three@0.152.2/examples/jsm/loaders/FBXLoader.js';
+import * as SkeletonUtils from 'https://esm.sh/three@0.152.2/examples/jsm/utils/SkeletonUtils.js';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CAMERA CONTROLS - Adjust these values to change camera behavior
@@ -10,44 +11,45 @@ import { GLTFLoader } from 'https://esm.sh/three@0.152.2/examples/jsm/loaders/GL
 const CAMERA_CONFIG = {
 	// Field of View (in degrees) - Higher = wider view, Lower = more zoomed/telephoto
 	// Recommended range: 40-60 degrees. Default: 50
-	FOV: 40,
+	FOV: 45,
 	
 	// Camera tilt angle (in degrees) - How much the camera looks down at the cards
 	// 0° = straight ahead, 90° = directly overhead
 	// Recommended range: 20-45 degrees. Default: 30
-	TILT_ANGLE: 60,
+	TILT_ANGLE: 75, // More overhead view for flat cards
 	
 	// Camera distance multiplier when auto-framing cards
 	// Higher = camera pulls back further, Lower = camera gets closer
 	// Recommended range: 1.0-1.3. Default: 1.15
-	PADDING: 1.15,
+	PADDING: 1.2,
 	
 	// Card spacing in 3D units
 	// Higher = more space between cards, Lower = cards closer together
 	// Recommended range: 2.5-4.0. Default: 3.2
-	CARD_SPACING: 2.5,
+	CARD_SPACING: 1.7,
 	
 	// Camera position offset (applied after auto-framing)
 	// Positive X = move camera right, Negative X = move camera left
 	// Positive Y = move camera up, Negative Y = move camera down
 	// Positive Z = move camera away from cards, Negative Z = move camera closer
 	OFFSET_X: 0,
-	OFFSET_Y: 0,
-	OFFSET_Z: 3
+	OFFSET_Y: 2, // Raise camera a bit higher
+	OFFSET_Z: 0
 };
 // ═══════════════════════════════════════════════════════════════════════════
 
 let renderer, scene, camera, raycaster;
-let cards = []; // { id, value, mesh, isFaceUp, isMatched }
-let gltfTemplate = null;
+let cards = []; // { id, value, mesh, isFaceUp, isMatched, mixer, flipAction }
+let fbxTemplate = null; // Changed from gltfTemplate
 let frontTextures = new Map();
 let backTexture = null;
 let onCardClickCallback = null;
 let container = null;
 let inputLocked = false;
 let inputLockTimer = null;
+let clock = new THREE.Clock();
 
-const loader = new GLTFLoader();
+const loader = new FBXLoader(); // Changed from GLTFLoader
 const texLoader = new THREE.TextureLoader();
 
 export async function initScene(onCardClick) {
@@ -122,11 +124,16 @@ export async function initScene(onCardClick) {
 	window.addEventListener('resize', onWindowResize);
 	window.addEventListener('click', onPointerClick);
 
-	// Preload the GLTF template and back texture
+	// Preload the FBX template and back texture
 	try {
-		gltfTemplate = await loader.loadAsync('/assets/models/card.glb');
+		fbxTemplate = await loader.loadAsync('/assets/models/card.fbx');
+		console.log('FBX loaded:', fbxTemplate);
+		console.log('FBX animations:', fbxTemplate.animations?.length || 0);
+		
+		// Log FBX structure
+		console.log('FBX children:', fbxTemplate.children.map(c => `${c.name} (${c.type})`));
 	} catch (err) {
-		console.warn('Failed to load card.glb:', err);
+		console.warn('Failed to load card.fbx:', err);
 	}
 
 	// Back texture: try to load card_back.png, but fall back to a simple generated texture
@@ -172,6 +179,15 @@ function onWindowResize() {
 
 function animate() {
 	requestAnimationFrame(animate);
+	
+	// Update all animation mixers
+	const delta = clock.getDelta();
+	cards.forEach(cardObj => {
+		if (cardObj.mixer) {
+			cardObj.mixer.update(delta);
+		}
+	});
+	
 	renderer.render(scene, camera);
 }
 
@@ -207,55 +223,102 @@ function onPointerClick(event) {
 }
 
 function createCardInstance(cardId, value, index, total) {
-	if (!gltfTemplate) return null;
+	if (!fbxTemplate) return null;
 
-	// Clone the scene (simple deep clone by scene.clone(true))
-	const clone = gltfTemplate.scene.clone(true);
+	// FBX with skinned meshes must use SkeletonUtils.clone to properly copy skeleton
+	const clone = SkeletonUtils.clone(fbxTemplate);
 	clone.name = `card_${cardId}`;
 	clone.userData.cardId = cardId;
 
-	// Find front and back meshes by traversing children (robust against arbitrary GLB naming)
+	// Find front and back meshes by traversing children
 	let frontMesh = null;
 	let backMesh = null;
+	const allMeshes = [];
+	
 	clone.traverse((node) => {
-		if (!node.isMesh) return;
+		if (!node.isMesh && !node.isSkinnedMesh) return;
+		allMeshes.push(node);
 		const lname = (node.name || '').toLowerCase();
-		if (!frontMesh && /front|face|front_face/.test(lname)) frontMesh = node;
-		if (!backMesh && /back|rear|back_face/.test(lname)) backMesh = node;
+		// Look for 'front' before 'back' in the name
+		if (!frontMesh && /front/.test(lname)) frontMesh = node;
+		else if (!backMesh && /back/.test(lname)) backMesh = node;
+	});
+	
+	// Fallback: if both have similar names, just use first two meshes
+	if (!frontMesh && !backMesh && allMeshes.length >= 2) {
+		frontMesh = allMeshes[0];
+		backMesh = allMeshes[1];
+	} else if (!frontMesh && allMeshes.length >= 1) {
+		frontMesh = allMeshes[0];
+	} else if (!backMesh && allMeshes.length >= 2) {
+		backMesh = allMeshes[1];
+	}
+
+	// Debug: Calculate bounding box to detect scale issues
+	const bbox = new THREE.Box3().setFromObject(clone);
+	const bboxSize = new THREE.Vector3();
+	bbox.getSize(bboxSize);
+	
+	// Only log for first card to avoid spam
+	if (index === 0) {
+		console.log(`📦 Card model size: ${bboxSize.x.toFixed(2)} x ${bboxSize.y.toFixed(2)} x ${bboxSize.z.toFixed(2)}`);
+		console.log(`   Found ${allMeshes.length} meshes:`, allMeshes.map(m => m.name || 'unnamed'));
+		console.log(`   Front mesh: ${frontMesh?.name || 'none'}, Back mesh: ${backMesh?.name || 'none'}`);
+	}
+
+	// Auto-scale if model is too small or too large
+	// Target size: approximately 2 units (good for our spacing of 2.5)
+	const maxDim = Math.max(bboxSize.x, bboxSize.y, bboxSize.z);
+	let autoScale = 1.0;
+	
+	if (maxDim > 0.001) { // Avoid division by zero
+		const targetSize = 2.0;
+		autoScale = targetSize / maxDim;
+		
+		if (index === 0) {
+			console.log(`🔍 Auto-scale factor: ${autoScale.toFixed(3)} (target size: ${targetSize})`);
+		}
+	}
+
+	// Apply materials to meshes
+	// Back mesh gets the back texture, front mesh gets white/neutral
+	allMeshes.forEach((mesh, idx) => {
+		if (mesh.material) {
+			mesh.material = mesh.material.clone();
+			mesh.material.side = THREE.DoubleSide; // Render both sides
+			
+			// Apply appropriate material based on mesh
+			if (mesh === backMesh) {
+				mesh.material.map = backTexture;
+				mesh.material.color = new THREE.Color(0xffffff);
+				if (index === 0) {
+					console.log(`  ✓ Applied back texture to: ${mesh.name}`);
+				}
+			} else if (mesh === frontMesh) {
+				const tex = frontTextures.get(value) || backTexture;
+				mesh.material.map = tex;
+				mesh.material.color = new THREE.Color(0xffffff);
+				if (index === 0) {
+					console.log(`  ✓ Applied front texture to: ${mesh.name}`);
+				}
+			} else {
+				// Default: white neutral color for any other meshes
+				mesh.material.color = new THREE.Color(0xffffff);
+			}
+			
+			mesh.material.needsUpdate = true;
+		}
 	});
 
-	// Fallbacks: pick first/second mesh if names not present
-	if (!frontMesh) {
-		// prefer a mesh whose material index is 0
-		frontMesh = clone.getObjectByProperty('isMesh', true) || null;
+	// Apply auto-scale
+	clone.scale.set(autoScale, autoScale, autoScale);
+	
+	// DON'T rotate the base card - the skeletal animation will handle the flip
+	// If cards appear vertical, adjust in your 3D software instead
+	
+	if (index === 0) {
+		console.log('💀 Using skeletal animation for flip (no base rotation applied)');
 	}
-	if (!backMesh) {
-		// try to find any other mesh distinct from frontMesh
-		clone.traverse((node) => {
-			if (!node.isMesh) return;
-			if (node === frontMesh) return;
-			if (!backMesh) backMesh = node;
-		});
-	}
-
-	// Apply back texture
-	if (backMesh && backMesh.material) {
-		backMesh.material = backMesh.material.clone();
-		backMesh.material.map = backTexture;
-		backMesh.material.needsUpdate = true;
-	}
-
-	// Apply front texture (placeholder if texture not yet loaded)
-	if (frontMesh && frontMesh.material) {
-		frontMesh.material = frontMesh.material.clone();
-		const tex = frontTextures.get(value) || backTexture;
-		frontMesh.material.map = tex;
-		frontMesh.material.needsUpdate = true;
-	}
-
-	// Scale down the imported model so cards don't overlap
-	// adjust model scale to make cards more visible
-	clone.scale.set(1.0, 1.0, 1.0);
 
 	// Position: arrange in grid by index using CARD_SPACING from CAMERA_CONFIG
 	const cols = Math.ceil(Math.sqrt(total));
@@ -266,12 +329,69 @@ function createCardInstance(cardId, value, index, total) {
 	const offsetZ = -(Math.ceil(total / cols) - 1) * spacing * 0.5;
 	clone.position.set(offsetX + col * spacing, 0, offsetZ + row * spacing);
 
-	// Ensure pivot for rotation is around center
-	clone.rotation.set(0, 0, 0);
+	if (index === 0) {
+		console.log(`📍 Created card 1/${total}: ${cardId} at (${clone.position.x.toFixed(1)}, ${clone.position.z.toFixed(1)})`);
+	} else if (index === 1) {
+		console.log(`📍 Created card 2/${total}: ${cardId} at (${clone.position.x.toFixed(1)}, ${clone.position.z.toFixed(1)})`);
+	} else if (index === 2) {
+		console.log(`📍 Created card 3/${total}: ${cardId} at (${clone.position.x.toFixed(1)}, ${clone.position.z.toFixed(1)})`);
+	} else if (index === 15) {
+		console.log(`📍 Created card 16/${total}: ${cardId} at (${clone.position.x.toFixed(1)}, ${clone.position.z.toFixed(1)})`);
+	}
+
+	// Setup animation mixer if animations exist
+	let mixer = null;
+	let flipAction = null;
+	
+	// FBX animations are stored directly on the object
+	if (fbxTemplate.animations && fbxTemplate.animations.length > 0) {
+		mixer = new THREE.AnimationMixer(clone);
+		
+		// Use the first animation (flip animation)
+		const clip = fbxTemplate.animations[0];
+		flipAction = mixer.clipAction(clip);
+		
+		// Configure animation settings
+		flipAction.setLoop(THREE.LoopOnce);
+		flipAction.clampWhenFinished = true;
+		flipAction.timeScale = 1; // Normal speed
+		
+		if (index === 0) {
+			console.log(`🎬 Animation setup:`);
+			console.log(`   - Clip name: "${clip.name}"`);
+			console.log(`   - Duration: ${clip.duration.toFixed(2)}s`);
+			console.log(`   - Tracks: ${clip.tracks.length}`);
+			clip.tracks.forEach((track, i) => {
+				console.log(`     Track ${i}: ${track.name} (${track.times.length} keyframes)`);
+			});
+		}
+	} else {
+		if (index === 0) {
+			console.warn('⚠️  No animations found in FBX model');
+		}
+	}
 
 	scene.add(clone);
+	
+	// Verify card was added and is visible
+	if (index === 0) {
+		console.log(`✅ Card added to scene at position (${clone.position.x.toFixed(1)}, ${clone.position.y.toFixed(1)}, ${clone.position.z.toFixed(1)})`);
+		console.log(`   Rotation: (${(clone.rotation.x * 180 / Math.PI).toFixed(1)}°, ${(clone.rotation.y * 180 / Math.PI).toFixed(1)}°, ${(clone.rotation.z * 180 / Math.PI).toFixed(1)}°)`);
+		console.log(`   Scale: ${clone.scale.x.toFixed(2)}`);
+		console.log(`   Visible: ${clone.visible}, Meshes: ${allMeshes.map(m => `${m.name}(visible=${m.visible})`).join(', ')}`);
+	}
 
-	return { id: cardId, value, mesh: clone, frontMesh, backMesh, isFaceUp: false, isMatched: false };
+	return { 
+		id: cardId, 
+		value, 
+		mesh: clone, 
+		frontMesh, 
+		backMesh, 
+		isFaceUp: false, 
+		isMatched: false,
+		mixer,
+		flipAction
+	};
 }
 
 function ensureFrontTexture(value) {
@@ -326,34 +446,53 @@ function setFrontTextureForMesh(cardObj, value) {
 	});
 }
 
-// Simple flip animation using requestAnimationFrame
-function animateFlip(cardObj, toFaceUp = true, durationMs = 400) {
-	const mesh = cardObj.mesh;
-	const start = performance.now();
-	const startRot = mesh.rotation.x;
-	const endRot = startRot + Math.PI * (toFaceUp ? 1 : -1); // flip around X axis
-	let swapped = false;
+// Animation using the built-in joint animation from FBX
+function animateFlip(cardObj, toFaceUp = true) {
+	if (!cardObj.flipAction || !cardObj.mixer) {
+		console.warn('⚠️  No animation available for card', cardObj.id);
+		return Promise.resolve();
+	}
+
+	console.log(`🎬 Playing flip animation for card ${cardObj.id}: ${toFaceUp ? 'FACE UP' : 'FACE DOWN'}`);
 
 	return new Promise((resolve) => {
-		function step(now) {
-			const t = Math.min(1, (now - start) / durationMs);
-			const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // easeInOut
-			mesh.rotation.x = startRot + (endRot - startRot) * eased;
-
-			// Swap texture at halfway (around PI/2)
-			if (!swapped && Math.abs(mesh.rotation.x - startRot) >= Math.PI / 2) {
-				setFrontTextureForMesh(cardObj, toFaceUp ? cardObj.value : null);
-				swapped = true;
-			}
-
-			if (t < 1) requestAnimationFrame(step);
-			else {
-				// normalize rotation to 0..2PI
-				mesh.rotation.x = ((mesh.rotation.x % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+		// Update texture immediately before starting animation
+		setFrontTextureForMesh(cardObj, toFaceUp ? cardObj.value : null);
+		
+		// Reset the animation to start
+		cardObj.mixer.stopAllAction();
+		cardObj.flipAction.reset();
+		
+		// Set direction based on whether we're flipping up or down
+		cardObj.flipAction.timeScale = toFaceUp ? 1 : -1;
+		
+		// If flipping down (reversed), start from the end
+		if (!toFaceUp) {
+			cardObj.flipAction.time = cardObj.flipAction.getClip().duration;
+		}
+		
+		// Play the animation
+		cardObj.flipAction.play();
+		
+		console.log(`   ▶️  Animation started: timeScale=${cardObj.flipAction.timeScale}, time=${cardObj.flipAction.time.toFixed(2)}s`);
+		
+		// Listen for animation completion
+		const onFinished = (event) => {
+			if (event.action === cardObj.flipAction) {
+				cardObj.mixer.removeEventListener('finished', onFinished);
+				console.log(`   ✅ Animation finished for card ${cardObj.id}`);
 				resolve();
 			}
-		}
-		requestAnimationFrame(step);
+		};
+		cardObj.mixer.addEventListener('finished', onFinished);
+		
+		// Safety timeout in case the event doesn't fire
+		const duration = cardObj.flipAction.getClip().duration;
+		setTimeout(() => {
+			cardObj.mixer.removeEventListener('finished', onFinished);
+			console.log(`   ⏱️  Animation timeout (${duration}s) for card ${cardObj.id}`);
+			resolve();
+		}, (duration * 1000) + 100);
 	});
 }
 
@@ -369,6 +508,8 @@ function fitCameraToCards() {
 	const center = new THREE.Vector3();
 	box.getCenter(center);
 
+	console.log(`📷 fitCameraToCards: box size=${size.x.toFixed(2)}, ${size.y.toFixed(2)}, ${size.z.toFixed(2)}, center=${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}`);
+
 	// Use width (x) and depth (z) to decide scale
 	const maxDim = Math.max(size.x, size.z, 1);
 
@@ -376,7 +517,10 @@ function fitCameraToCards() {
 	const fov = camera.fov * (Math.PI / 180);
 	const halfFov = fov / 2;
 	// distance required so that maxDim fits vertically at the given fov
-	const distance = (maxDim / 2) / Math.tan(halfFov) * CAMERA_CONFIG.PADDING;
+	let distance = (maxDim / 2) / Math.tan(halfFov) * CAMERA_CONFIG.PADDING;
+	
+	// Ensure minimum distance to avoid clipping
+	distance = Math.max(distance, 5);
 
 	// Calculate camera position using TILT_ANGLE
 	const tiltRad = (Math.PI / 180) * CAMERA_CONFIG.TILT_ANGLE;
@@ -391,6 +535,8 @@ function fitCameraToCards() {
 	);
 	camera.lookAt(center);
 	camera.updateProjectionMatrix();
+	
+	console.log(`   Camera position: ${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)}, looking at ${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}`);
 }
 
 export async function updateFromGameState(gameState) {
@@ -410,6 +556,26 @@ export async function updateFromGameState(gameState) {
 	const loadPromises = gameState.cards.map((c) => ensureFrontTexture(c.value));
 	await Promise.all(loadPromises);
 
+	// IMPORTANT: Remove ALL old cards that are not in the new game state
+	// This prevents cards from stacking up across multiple games
+	const newGameCardIds = new Set(gameState.cards.map(c => c.id));
+	const cardsToRemove = cards.filter(c => !newGameCardIds.has(c.id));
+	
+	if (cardsToRemove.length > 0) {
+		console.log(`🗑️  Removing ${cardsToRemove.length} old cards from previous game`);
+		cardsToRemove.forEach(c => {
+			scene.remove(c.mesh);
+			// Dispose of geometries and materials to free memory
+			c.mesh.traverse((node) => {
+				if (node.isMesh) {
+					node.geometry?.dispose();
+					node.material?.dispose();
+				}
+			});
+		});
+		cards = cards.filter(c => newGameCardIds.has(c.id));
+	}
+
 	// Create missing cards
 	gameState.cards.forEach((c, idx) => {
 		let existing = cards.find((x) => x.id === c.id);
@@ -418,6 +584,8 @@ export async function updateFromGameState(gameState) {
 			if (inst) cards.push(inst);
 		}
 	});
+	
+	console.log(`🃏 Total cards in scene: ${cards.length}/${total}`);
 
 	// Remove extra cards if any (rare)
 	cards.slice().forEach((c) => {
@@ -449,7 +617,7 @@ export async function updateFromGameState(gameState) {
 		if (g.isFaceUp !== local.isFaceUp) {
 			// update value so swap uses correct texture
 			local.value = g.value;
-			await animateFlip(local, g.isFaceUp, 380);
+			await animateFlip(local, g.isFaceUp);
 			local.isFaceUp = g.isFaceUp;
 		}
 	}
