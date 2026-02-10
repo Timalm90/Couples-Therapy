@@ -1,16 +1,20 @@
 /**
  * Renderer Module
- * Handles Three.js scene initialization, camera, lights, and render loop
+ * Handles Three.js scene initialization, camera, lights, HDRI, shadows, and render loop
  */
 
 import * as THREE from "https://esm.sh/three@0.152.2";
+import { RGBELoader } from "https://esm.sh/three@0.152.2/examples/jsm/loaders/RGBELoader.js";
 import {
   CAMERA_CONFIG,
   RENDER_CONFIG,
   LIGHTING_CONFIG,
   ANIMATION_CONFIG,
+  HDRI_CONFIG,
+  LIQUID_GLASS_CONFIG,
 } from "./config.js";
 import { updateAnimations } from "./animator.js";
+import { updateLiquidGlassShader } from "./liquidglassshader.js";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MODULE STATE
@@ -24,6 +28,8 @@ let container = null;
 let clock = new THREE.Clock();
 let animationFrameId = null;
 let resizeTimeout = null;
+let envMap = null;
+let shadowCatcher = null;
 
 // External references (set by other modules)
 let cardsArray = [];
@@ -36,9 +42,9 @@ let onCardClickCallback = null;
 /**
  * Initialize the Three.js renderer and scene
  * @param {function} onCardClick - Callback when a card is clicked
- * @returns {object} Scene, camera, and renderer references
+ * @returns {object} Scene, camera, renderer, and envMap references
  */
-export function initRenderer(onCardClick) {
+export async function initRenderer(onCardClick) {
   onCardClickCallback = onCardClick;
 
   // Setup container
@@ -72,6 +78,12 @@ export function initRenderer(onCardClick) {
     alpha: RENDER_CONFIG.ALPHA,
   });
 
+  // Enable shadows
+  if (RENDER_CONFIG.SHADOWS_ENABLED) {
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows
+  }
+
   const dpr = Math.min(window.devicePixelRatio || 1, RENDER_CONFIG.MAX_DPR);
   renderer.setPixelRatio(dpr);
 
@@ -96,7 +108,33 @@ export function initRenderer(onCardClick) {
 
   // Initialize scene
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
+  
+  // Load HDRI if enabled
+  if (HDRI_CONFIG.ENABLED) {
+    console.log("🌅 Loading HDRI environment...");
+    try {
+      envMap = await loadHDRI(HDRI_CONFIG.PATH);
+      scene.environment = envMap;
+      
+      if (HDRI_CONFIG.SHOW_AS_BACKGROUND) {
+        scene.background = envMap;
+        scene.backgroundBlurriness = HDRI_CONFIG.BACKGROUND_BLUR;
+      } else {
+        scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
+      }
+      
+      console.log("✅ HDRI loaded successfully");
+    } catch (err) {
+      console.warn("⚠️  Failed to load HDRI, using fallback:", err);
+      scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
+      envMap = createFallbackEnvMap();
+      scene.environment = envMap;
+    }
+  } else {
+    scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
+    envMap = createFallbackEnvMap();
+    scene.environment = envMap;
+  }
 
   // Initialize camera
   const containerWidth = container.clientWidth || window.innerWidth;
@@ -134,6 +172,39 @@ export function initRenderer(onCardClick) {
   );
   scene.add(dir);
 
+  // Add shadow-casting light if enabled
+  if (LIGHTING_CONFIG.SHADOW_LIGHT_ENABLED && RENDER_CONFIG.SHADOWS_ENABLED) {
+    const shadowLight = new THREE.DirectionalLight(
+      0xffffff,
+      LIGHTING_CONFIG.SHADOW_LIGHT_INTENSITY,
+    );
+    shadowLight.position.set(
+      LIGHTING_CONFIG.SHADOW_LIGHT_POSITION.x,
+      LIGHTING_CONFIG.SHADOW_LIGHT_POSITION.y,
+      LIGHTING_CONFIG.SHADOW_LIGHT_POSITION.z,
+    );
+    
+    shadowLight.castShadow = true;
+    shadowLight.shadow.mapSize.width = RENDER_CONFIG.SHADOW_MAP_SIZE;
+    shadowLight.shadow.mapSize.height = RENDER_CONFIG.SHADOW_MAP_SIZE;
+    shadowLight.shadow.camera.near = 0.5;
+    shadowLight.shadow.camera.far = 50;
+    shadowLight.shadow.camera.left = -15;
+    shadowLight.shadow.camera.right = 15;
+    shadowLight.shadow.camera.top = 15;
+    shadowLight.shadow.camera.bottom = -15;
+    shadowLight.shadow.bias = RENDER_CONFIG.SHADOW_BIAS;
+    shadowLight.shadow.radius = RENDER_CONFIG.SHADOW_RADIUS;
+    
+    scene.add(shadowLight);
+    console.log("💡 Shadow-casting light added");
+  }
+
+  // Create shadow catcher (invisible plane that receives shadows)
+  if (RENDER_CONFIG.SHADOWS_ENABLED) {
+    createShadowCatcher();
+  }
+
   // Initialize raycaster for click detection
   raycaster = new THREE.Raycaster();
 
@@ -150,7 +221,81 @@ export function initRenderer(onCardClick) {
   // Start render loop
   startRenderLoop();
 
-  return { scene, camera, renderer };
+  return { scene, camera, renderer, envMap };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HDRI LOADING
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Load an HDRI environment map
+ * @param {string} path - Path to the .hdr file
+ * @returns {Promise<THREE.Texture>} The loaded environment map
+ */
+function loadHDRI(path) {
+  return new Promise((resolve, reject) => {
+    const loader = new RGBELoader();
+    loader.load(
+      path,
+      (texture) => {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        resolve(texture);
+      },
+      undefined,
+      (error) => {
+        reject(error);
+      }
+    );
+  });
+}
+
+/**
+ * Create a fallback environment map if HDRI fails to load
+ * @returns {THREE.CubeTexture} A simple gradient cube map
+ */
+function createFallbackEnvMap() {
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  
+  // Create a simple gradient
+  const gradient = ctx.createLinearGradient(0, 0, 0, size);
+  gradient.addColorStop(0, '#87CEEB'); // Sky blue
+  gradient.addColorStop(1, '#E0F6FF'); // Light blue
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.mapping = THREE.EquirectangularReflectionMapping;
+  
+  return texture;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SHADOW CATCHER
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Create an invisible plane that receives shadows (shadow catcher)
+ */
+function createShadowCatcher() {
+  const geometry = new THREE.PlaneGeometry(100, 100);
+  
+  // Create custom shadow catcher material
+  const material = new THREE.ShadowMaterial();
+  material.opacity = 0.3; // Shadow darkness (0 = invisible, 1 = black)
+  
+  shadowCatcher = new THREE.Mesh(geometry, material);
+  shadowCatcher.rotation.x = -Math.PI / 2; // Rotate to be horizontal
+  shadowCatcher.position.y = -0.01; // Slightly below cards to avoid z-fighting
+  shadowCatcher.receiveShadow = true;
+  shadowCatcher.name = "shadowCatcher";
+  
+  scene.add(shadowCatcher);
+  console.log("🎭 Shadow catcher plane added");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -163,6 +308,15 @@ function animate() {
   // Update all animation mixers
   const delta = clock.getDelta();
   updateAnimations(cardsArray, delta);
+
+  // Update liquid glass shaders if enabled
+  if (LIQUID_GLASS_CONFIG.ENABLED && envMap) {
+    cardsArray.forEach((card) => {
+      if (card.backMesh && card.backMesh.material && card.backMesh.material.uniforms) {
+        updateLiquidGlassShader(card.backMesh.material, delta);
+      }
+    });
+  }
 
   // Render the scene
   if (renderer && scene && camera) {
@@ -283,6 +437,27 @@ export function getRenderer() {
   return renderer;
 }
 
+export function getEnvMap() {
+  return envMap;
+}
+
 export function triggerResize() {
   onWindowResize();
+}
+
+/**
+ * Update HDRI visibility in background
+ * @param {boolean} visible - Whether to show HDRI as background
+ */
+export function setHDRIBackgroundVisible(visible) {
+  if (!scene || !envMap) return;
+  
+  if (visible) {
+    scene.background = envMap;
+    scene.backgroundBlurriness = HDRI_CONFIG.BACKGROUND_BLUR;
+  } else {
+    scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
+  }
+  
+  console.log(`🌅 HDRI background ${visible ? 'shown' : 'hidden'}`);
 }

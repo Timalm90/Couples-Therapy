@@ -17,7 +17,7 @@ import {
   launchFullscreenConfetti,
   stopFullscreenConfetti,
 } from "./animator.js";
-import { initRenderer, setCardsArray, triggerResize } from "./renderer.js";
+import { initRenderer, setCardsArray, triggerResize, getEnvMap } from "./renderer.js";
 import {
   initCardManager,
   updateFromGameState,
@@ -43,11 +43,11 @@ async function init() {
   // Connect to server
   gameClient.connect();
 
-  // Initialize renderer
-  const { scene, camera, renderer } = initRenderer(handleCardClick);
+  // Initialize renderer (now async to wait for HDRI loading)
+  const { scene, camera, renderer, envMap } = await initRenderer(handleCardClick);
 
-  // Initialize card manager
-  await initCardManager(scene, camera);
+  // Initialize card manager with envMap for liquid glass shader
+  await initCardManager(scene, camera, envMap);
 
   // Setup client callbacks
   gameClient.onConnectionChange = handleConnectionChange;
