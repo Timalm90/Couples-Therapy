@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/Timalm90/Couples-Therapy#readme",
   "dependencies": {
+    "composer": "^4.1.0",
     "nanoid": "^5.1.6",
     "three": "^0.182.0",
     "ws": "^8.19.0"

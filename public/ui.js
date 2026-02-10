@@ -3,7 +3,7 @@
  * Handles all user interface updates and DOM manipulation
  */
 
-import { ANIMATION_CONFIG } from './config.js';
+import { ANIMATION_CONFIG } from "./config.js";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GAME INFO DISPLAY
@@ -75,7 +75,7 @@ export function showError(errorMessage) {
   if (!errorBox) return;
 
   errorBox.innerHTML = `<div class="error">❌ ${errorMessage}</div>`;
-  
+
   setTimeout(() => {
     errorBox.innerHTML = "";
   }, 3000);
@@ -89,22 +89,22 @@ export function showStartingPlaceholder() {
   const grid = document.getElementById("cardGrid");
   if (!grid) return;
 
-  let ph = document.getElementById('startingPlaceholder');
+  let ph = document.getElementById("startingPlaceholder");
   if (!ph) {
-    ph = document.createElement('div');
-    ph.id = 'startingPlaceholder';
-    ph.style.textAlign = 'center';
-    ph.style.color = '#888';
-    ph.textContent = 'Starting new game...';
+    ph = document.createElement("div");
+    ph.id = "startingPlaceholder";
+    ph.style.textAlign = "center";
+    ph.style.color = "#888";
+    ph.textContent = "Starting new game...";
     grid.appendChild(ph);
   } else {
-    ph.textContent = 'Starting new game...';
-    ph.style.display = 'block';
+    ph.textContent = "Starting new game...";
+    ph.style.display = "block";
   }
 }
 
 export function hideStartingPlaceholder() {
-  const ph = document.getElementById('startingPlaceholder');
+  const ph = document.getElementById("startingPlaceholder");
   if (ph && ph.parentNode) {
     ph.parentNode.removeChild(ph);
   }
@@ -134,7 +134,12 @@ function getWinners(gameState) {
   return { winners, maxScore };
 }
 
-export function showWinPopup(gameState, onPlayAgain, onConfettiStart, onConfettiStop) {
+export function showWinPopup(
+  gameState,
+  onPlayAgain,
+  onConfettiStart,
+  onConfettiStop,
+) {
   // Prevent showing popup multiple times for same game
   if (hasShownWinPopupForGameId === gameState.gameId) return;
   hasShownWinPopupForGameId = gameState.gameId;
@@ -149,7 +154,7 @@ export function showWinPopup(gameState, onPlayAgain, onConfettiStart, onConfetti
 
   const title = isDraw
     ? "It's a draw, you need more therapy!"
-    : ` Congratulation ${winners.map((w) => w.color).join(' & ')}! You are the winner of Couples Therapy!`;
+    : ` Congratulation ${winners.map((w) => w.color).join(" & ")}! You are the winner of Couples Therapy!`;
 
   const scoreText = gameState.players
     .map((p) => `${p.color}: ${p.score}`)
@@ -185,7 +190,9 @@ export function showWinPopup(gameState, onPlayAgain, onConfettiStart, onConfetti
   });
 
   // Close button
-  overlay.querySelector("#closeWinModal")?.addEventListener("click", closePopup);
+  overlay
+    .querySelector("#closeWinModal")
+    ?.addEventListener("click", closePopup);
 
   // Play again button
   overlay.querySelector("#playAgainBtn")?.addEventListener("click", () => {

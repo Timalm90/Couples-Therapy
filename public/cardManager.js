@@ -3,11 +3,11 @@
  * Handles card instance creation, positioning, textures, and state management
  */
 
-import * as THREE from 'https://esm.sh/three@0.152.2';
-import { FBXLoader } from 'https://esm.sh/three@0.152.2/examples/jsm/loaders/FBXLoader.js';
-import * as SkeletonUtils from 'https://esm.sh/three@0.152.2/examples/jsm/utils/SkeletonUtils.js';
-import { CAMERA_CONFIG, CARD_CONFIG, ASSET_PATHS } from './config.js';
-import { animateCardFlip } from './animator.js';
+import * as THREE from "https://esm.sh/three@0.152.2";
+import { FBXLoader } from "https://esm.sh/three@0.152.2/examples/jsm/loaders/FBXLoader.js";
+import * as SkeletonUtils from "https://esm.sh/three@0.152.2/examples/jsm/utils/SkeletonUtils.js";
+import { CAMERA_CONFIG, CARD_CONFIG, ASSET_PATHS } from "./config.js";
+import { animateCardFlip } from "./animator.js";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MODULE STATE
@@ -43,11 +43,14 @@ export async function initCardManager(sceneRef, cameraRef) {
   // Load FBX model
   try {
     fbxTemplate = await loader.loadAsync(ASSET_PATHS.CARD_MODEL);
-    console.log('FBX loaded:', fbxTemplate);
-    console.log('FBX animations:', fbxTemplate.animations?.length || 0);
-    console.log('FBX children:', fbxTemplate.children.map(c => `${c.name} (${c.type})`));
+    console.log("FBX loaded:", fbxTemplate);
+    console.log("FBX animations:", fbxTemplate.animations?.length || 0);
+    console.log(
+      "FBX children:",
+      fbxTemplate.children.map((c) => `${c.name} (${c.type})`),
+    );
   } catch (err) {
-    console.warn('Failed to load card.fbx:', err);
+    console.warn("Failed to load card.fbx:", err);
   }
 
   // Load back texture
@@ -58,22 +61,22 @@ export async function initCardManager(sceneRef, cameraRef) {
       undefined,
       () => {
         // Fallback: create a simple canvas texture
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         canvas.width = 256;
         canvas.height = 256;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#444';
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#444";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#666';
+        ctx.fillStyle = "#666";
         ctx.fillRect(12, 12, canvas.width - 24, canvas.height - 24);
-        ctx.fillStyle = '#bbb';
-        ctx.font = 'bold 64px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('?', canvas.width / 2, canvas.height / 2 + 6);
+        ctx.fillStyle = "#bbb";
+        ctx.font = "bold 64px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("?", canvas.width / 2, canvas.height / 2 + 6);
         const tex = new THREE.CanvasTexture(canvas);
         resolve(tex);
-      }
+      },
     );
   });
 }
@@ -84,25 +87,26 @@ export async function initCardManager(sceneRef, cameraRef) {
 
 function ensureFrontTexture(value) {
   if (!value) return Promise.resolve(backTexture);
-  if (frontTextures.has(value)) return Promise.resolve(frontTextures.get(value));
+  if (frontTextures.has(value))
+    return Promise.resolve(frontTextures.get(value));
 
   // Map server card values (A-H) to numeric texture names 01..08
   let indexStr;
-  if (typeof value === 'number') {
-    indexStr = String(value).padStart(2, '0');
-  } else if (typeof value === 'string') {
+  if (typeof value === "number") {
+    indexStr = String(value).padStart(2, "0");
+  } else if (typeof value === "string") {
     const m = value.match(/^[A-Za-z]$/);
     if (m) {
       const upper = value.toUpperCase();
-      const idx = upper.charCodeAt(0) - 'A'.charCodeAt(0) + 1; // A -> 1
-      indexStr = String(idx).padStart(2, '0');
+      const idx = upper.charCodeAt(0) - "A".charCodeAt(0) + 1; // A -> 1
+      indexStr = String(idx).padStart(2, "0");
     } else {
       const parsed = parseInt(value, 10);
-      if (!isNaN(parsed)) indexStr = String(parsed).padStart(2, '0');
-      else indexStr = String(value).padStart(2, '0');
+      if (!isNaN(parsed)) indexStr = String(parsed).padStart(2, "0");
+      else indexStr = String(value).padStart(2, "0");
     }
   } else {
-    indexStr = String(value).padStart(2, '0');
+    indexStr = String(value).padStart(2, "0");
   }
 
   return new Promise((resolve) => {
@@ -115,18 +119,50 @@ function ensureFrontTexture(value) {
       },
       undefined,
       (err) => {
-        console.warn('Failed to load texture', path, err);
+        console.warn("Failed to load texture", path, err);
         resolve(backTexture);
-      }
+      },
     );
   });
 }
 
-function setFrontTextureForMesh(cardObj, value) {
+function setFrontTextureForMesh(cardObj, arg) {
+  // `arg` may be either a boolean `toFaceUp` (from animator) or
+  // a texture value/index. If boolean and true, use the card's value;
+  // if boolean and false, assign the back texture.
   const front = cardObj.frontMesh;
   if (!front) return;
+
+  const isBool = typeof arg === "boolean";
+  if (isBool) {
+    const toFaceUp = arg;
+    if (!toFaceUp) {
+      // Face-down: show back texture on front mesh to match visual
+      front.material = front.material
+        ? front.material.clone()
+        : new THREE.MeshBasicMaterial();
+      front.material.map = backTexture;
+      front.material.needsUpdate = true;
+      return;
+    }
+    // Face-up: use the card object's current value
+    const value = cardObj.value;
+    ensureFrontTexture(value).then((tex) => {
+      front.material = front.material
+        ? front.material.clone()
+        : new THREE.MeshBasicMaterial();
+      front.material.map = tex;
+      front.material.needsUpdate = true;
+    });
+    return;
+  }
+
+  // Non-boolean: treat arg as the value/index to load
+  const value = arg;
   ensureFrontTexture(value).then((tex) => {
-    front.material = front.material ? front.material.clone() : new THREE.MeshBasicMaterial();
+    front.material = front.material
+      ? front.material.clone()
+      : new THREE.MeshBasicMaterial();
     front.material.map = tex;
     front.material.needsUpdate = true;
   });
@@ -148,15 +184,15 @@ function createCardInstance(cardId, value, index, total) {
   let frontMesh = null;
   let backMesh = null;
   const allMeshes = [];
-  
+
   clone.traverse((node) => {
     if (!node.isMesh && !node.isSkinnedMesh) return;
     allMeshes.push(node);
-    const lname = (node.name || '').toLowerCase();
+    const lname = (node.name || "").toLowerCase();
     if (!frontMesh && /front/.test(lname)) frontMesh = node;
     else if (!backMesh && /back/.test(lname)) backMesh = node;
   });
-  
+
   // Fallback mesh detection
   if (!frontMesh && !backMesh && allMeshes.length >= 2) {
     frontMesh = allMeshes[0];
@@ -171,21 +207,30 @@ function createCardInstance(cardId, value, index, total) {
   const bbox = new THREE.Box3().setFromObject(clone);
   const bboxSize = new THREE.Vector3();
   bbox.getSize(bboxSize);
-  
+
   if (index === 0) {
-    console.log(`📦 Card model size: ${bboxSize.x.toFixed(2)} x ${bboxSize.y.toFixed(2)} x ${bboxSize.z.toFixed(2)}`);
-    console.log(`   Found ${allMeshes.length} meshes:`, allMeshes.map(m => m.name || 'unnamed'));
-    console.log(`   Front mesh: ${frontMesh?.name || 'none'}, Back mesh: ${backMesh?.name || 'none'}`);
+    console.log(
+      `📦 Card model size: ${bboxSize.x.toFixed(2)} x ${bboxSize.y.toFixed(2)} x ${bboxSize.z.toFixed(2)}`,
+    );
+    console.log(
+      `   Found ${allMeshes.length} meshes:`,
+      allMeshes.map((m) => m.name || "unnamed"),
+    );
+    console.log(
+      `   Front mesh: ${frontMesh?.name || "none"}, Back mesh: ${backMesh?.name || "none"}`,
+    );
   }
 
   // Auto-scale
   const maxDim = Math.max(bboxSize.x, bboxSize.y, bboxSize.z);
   let autoScale = 1.0;
-  
+
   if (maxDim > 0.001) {
     autoScale = CARD_CONFIG.TARGET_SIZE / maxDim;
     if (index === 0) {
-      console.log(`🔍 Auto-scale factor: ${autoScale.toFixed(3)} (target size: ${CARD_CONFIG.TARGET_SIZE})`);
+      console.log(
+        `🔍 Auto-scale factor: ${autoScale.toFixed(3)} (target size: ${CARD_CONFIG.TARGET_SIZE})`,
+      );
     }
   }
 
@@ -194,7 +239,7 @@ function createCardInstance(cardId, value, index, total) {
     if (mesh.material) {
       mesh.material = mesh.material.clone();
       mesh.material.side = THREE.DoubleSide;
-      
+
       if (mesh === backMesh) {
         mesh.material.map = backTexture;
         mesh.material.color = new THREE.Color(0xffffff);
@@ -211,16 +256,18 @@ function createCardInstance(cardId, value, index, total) {
       } else {
         mesh.material.color = new THREE.Color(0xffffff);
       }
-      
+
       mesh.material.needsUpdate = true;
     }
   });
 
   // Apply scale
   clone.scale.set(autoScale, autoScale, autoScale);
-  
+
   if (index === 0) {
-    console.log('💀 Using skeletal animation for flip (no base rotation applied)');
+    console.log(
+      "💀 Using skeletal animation for flip (no base rotation applied)",
+    );
   }
 
   // Position in grid
@@ -233,19 +280,27 @@ function createCardInstance(cardId, value, index, total) {
   clone.position.set(offsetX + col * spacing, 0, offsetZ + row * spacing);
 
   if (index === 0) {
-    console.log(`📍 Created card 1/${total}: ${cardId} at (${clone.position.x.toFixed(1)}, ${clone.position.z.toFixed(1)})`);
+    console.log(
+      `📍 Created card 1/${total}: ${cardId} at (${clone.position.x.toFixed(1)}, ${clone.position.z.toFixed(1)})`,
+    );
   } else if (index === 1) {
-    console.log(`📍 Created card 2/${total}: ${cardId} at (${clone.position.x.toFixed(1)}, ${clone.position.z.toFixed(1)})`);
+    console.log(
+      `📍 Created card 2/${total}: ${cardId} at (${clone.position.x.toFixed(1)}, ${clone.position.z.toFixed(1)})`,
+    );
   } else if (index === 2) {
-    console.log(`📍 Created card 3/${total}: ${cardId} at (${clone.position.x.toFixed(1)}, ${clone.position.z.toFixed(1)})`);
+    console.log(
+      `📍 Created card 3/${total}: ${cardId} at (${clone.position.x.toFixed(1)}, ${clone.position.z.toFixed(1)})`,
+    );
   } else if (index === 15) {
-    console.log(`📍 Created card 16/${total}: ${cardId} at (${clone.position.x.toFixed(1)}, ${clone.position.z.toFixed(1)})`);
+    console.log(
+      `📍 Created card 16/${total}: ${cardId} at (${clone.position.x.toFixed(1)}, ${clone.position.z.toFixed(1)})`,
+    );
   }
 
   // Setup animation
   let mixer = null;
   let flipAction = null;
-  
+
   if (fbxTemplate.animations && fbxTemplate.animations.length > 0) {
     mixer = new THREE.AnimationMixer(clone);
     const clip = fbxTemplate.animations[0];
@@ -253,7 +308,7 @@ function createCardInstance(cardId, value, index, total) {
     flipAction.setLoop(THREE.LoopOnce);
     flipAction.clampWhenFinished = true;
     flipAction.timeScale = 1;
-    
+
     if (index === 0) {
       console.log(`🎬 Animation setup:`);
       console.log(`   - Clip name: "${clip.name}"`);
@@ -263,22 +318,24 @@ function createCardInstance(cardId, value, index, total) {
   }
 
   scene.add(clone);
-  
+
   if (index === 0) {
-    console.log(`✅ Card added to scene at position (${clone.position.x.toFixed(1)}, ${clone.position.y.toFixed(1)}, ${clone.position.z.toFixed(1)})`);
+    console.log(
+      `✅ Card added to scene at position (${clone.position.x.toFixed(1)}, ${clone.position.y.toFixed(1)}, ${clone.position.z.toFixed(1)})`,
+    );
     console.log(`   Scale: ${clone.scale.x.toFixed(2)}`);
   }
 
-  return { 
-    id: cardId, 
-    value, 
-    mesh: clone, 
-    frontMesh, 
-    backMesh, 
-    isFaceUp: false, 
+  return {
+    id: cardId,
+    value,
+    mesh: clone,
+    frontMesh,
+    backMesh,
+    isFaceUp: false,
     isMatched: false,
     mixer,
-    flipAction
+    flipAction,
   };
 }
 
@@ -290,18 +347,20 @@ function fitCameraToCards() {
   if (!camera || cards.length === 0) return;
 
   const box = new THREE.Box3();
-  cards.forEach(c => box.expandByObject(c.mesh));
+  cards.forEach((c) => box.expandByObject(c.mesh));
   const size = new THREE.Vector3();
   box.getSize(size);
   const center = new THREE.Vector3();
   box.getCenter(center);
 
-  console.log(`📷 fitCameraToCards: box size=${size.x.toFixed(2)}, ${size.y.toFixed(2)}, ${size.z.toFixed(2)}, center=${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}`);
+  console.log(
+    `📷 fitCameraToCards: box size=${size.x.toFixed(2)}, ${size.y.toFixed(2)}, ${size.z.toFixed(2)}, center=${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}`,
+  );
 
   const maxDim = Math.max(size.x, size.z, 1);
   const fov = camera.fov * (Math.PI / 180);
   const halfFov = fov / 2;
-  let distance = (maxDim / 2) / Math.tan(halfFov) * CAMERA_CONFIG.PADDING;
+  let distance = (maxDim / 2 / Math.tan(halfFov)) * CAMERA_CONFIG.PADDING;
   distance = Math.max(distance, 5);
 
   const tiltRad = (Math.PI / 180) * CAMERA_CONFIG.TILT_ANGLE;
@@ -309,14 +368,16 @@ function fitCameraToCards() {
   const horizontalOffset = distance * Math.cos(tiltRad);
 
   camera.position.set(
-    center.x + CAMERA_CONFIG.OFFSET_X, 
-    verticalOffset + center.y + CAMERA_CONFIG.OFFSET_Y, 
-    center.z + horizontalOffset + CAMERA_CONFIG.OFFSET_Z
+    center.x + CAMERA_CONFIG.OFFSET_X,
+    verticalOffset + center.y + CAMERA_CONFIG.OFFSET_Y,
+    center.z + horizontalOffset + CAMERA_CONFIG.OFFSET_Z,
   );
   camera.lookAt(center);
   camera.updateProjectionMatrix();
-  
-  console.log(`   Camera position: ${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)}, looking at ${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}`);
+
+  console.log(
+    `   Camera position: ${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)}, looking at ${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}`,
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -337,12 +398,14 @@ export async function updateFromGameState(gameState) {
   await Promise.all(loadPromises);
 
   // Remove old cards
-  const newGameCardIds = new Set(gameState.cards.map(c => c.id));
-  const cardsToRemove = cards.filter(c => !newGameCardIds.has(c.id));
-  
+  const newGameCardIds = new Set(gameState.cards.map((c) => c.id));
+  const cardsToRemove = cards.filter((c) => !newGameCardIds.has(c.id));
+
   if (cardsToRemove.length > 0) {
-    console.log(`🗑️  Removing ${cardsToRemove.length} old cards from previous game`);
-    cardsToRemove.forEach(c => {
+    console.log(
+      `🗑️  Removing ${cardsToRemove.length} old cards from previous game`,
+    );
+    cardsToRemove.forEach((c) => {
       scene.remove(c.mesh);
       c.mesh.traverse((node) => {
         if (node.isMesh) {
@@ -351,7 +414,7 @@ export async function updateFromGameState(gameState) {
         }
       });
     });
-    cards = cards.filter(c => newGameCardIds.has(c.id));
+    cards = cards.filter((c) => newGameCardIds.has(c.id));
   }
 
   // Create new cards
@@ -366,7 +429,7 @@ export async function updateFromGameState(gameState) {
       }
     }
   });
-  
+
   console.log(`🃏 Total cards in scene: ${cards.length}/${total}`);
 
   // Update card states and animate
@@ -385,8 +448,8 @@ export async function updateFromGameState(gameState) {
           }
           if (node.material.color) {
             node.material.color.lerp(
-              new THREE.Color(CARD_CONFIG.MATCH_TINT_COLOR), 
-              CARD_CONFIG.MATCH_TINT_AMOUNT
+              new THREE.Color(CARD_CONFIG.MATCH_TINT_COLOR),
+              CARD_CONFIG.MATCH_TINT_AMOUNT,
             );
           }
         }
@@ -413,7 +476,7 @@ export async function updateFromGameState(gameState) {
     try {
       fitCameraToCards();
     } catch (err) {
-      console.warn('fitCameraToCards failed:', err);
+      console.warn("fitCameraToCards failed:", err);
     }
   }
 }
