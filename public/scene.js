@@ -33,7 +33,7 @@ const CAMERA_CONFIG = {
 	// Positive Y = move camera up, Negative Y = move camera down
 	// Positive Z = move camera away from cards, Negative Z = move camera closer
 	OFFSET_X: 0,
-	OFFSET_Y: 2, // Raise camera a bit higher
+	OFFSET_Y: 1, // Raise camera a bit higher
 	OFFSET_Z: 0
 };
 // ═══════════════════════════════════════════════════════════════════════════
@@ -59,9 +59,13 @@ export async function initScene(onCardClick) {
 	const grid = document.getElementById('cardGrid');
 	if (grid) {
 		container = grid;
-		// ensure grid can contain canvas
+		// ensure grid can contain canvas and won't collapse
 		container.style.position = container.style.position || 'relative';
 		container.style.overflow = 'hidden';
+		container.style.minWidth = '300px';
+		container.style.minHeight = '200px';
+		container.style.width = container.style.width || '100%';
+		container.style.height = container.style.height || '100%';
 		// preserve existing children; do not remove them here - caller should avoid clearing the grid
 	} else {
 		container = document.createElement('div');
@@ -71,6 +75,8 @@ export async function initScene(onCardClick) {
 		container.style.top = '0';
 		container.style.width = '100%';
 		container.style.height = '100%';
+		container.style.minWidth = '300px';
+		container.style.minHeight = '200px';
 		container.style.pointerEvents = 'auto';
 		document.body.appendChild(container);
 	}
@@ -98,9 +104,13 @@ export async function initScene(onCardClick) {
 	scene.background = new THREE.Color(0x202020);
 
 	// Initialize camera with FOV from CAMERA_CONFIG
+	// Use container dimensions for proper aspect ratio
+	const containerWidth = container.clientWidth || window.innerWidth;
+	const containerHeight = container.clientHeight || window.innerHeight;
+	
 	camera = new THREE.PerspectiveCamera(
 		CAMERA_CONFIG.FOV, 
-		window.innerWidth / window.innerHeight, 
+		containerWidth / containerHeight, 
 		0.1, 
 		2000
 	);
@@ -121,7 +131,11 @@ export async function initScene(onCardClick) {
 
 	raycaster = new THREE.Raycaster();
 
-	window.addEventListener('resize', onWindowResize);
+	window.addEventListener('resize', handleResize);
+	// Also listen to visual viewport for better zoom handling
+	if (window.visualViewport) {
+		window.visualViewport.addEventListener('resize', handleResize);
+	}
 	window.addEventListener('click', onPointerClick);
 
 	// Preload the FBX template and back texture
@@ -168,13 +182,61 @@ export async function initScene(onCardClick) {
 
 function onWindowResize() {
 	if (!camera || !renderer || !container) return;
-	const w = container.clientWidth || window.innerWidth;
-	const h = container.clientHeight || window.innerHeight;
+	
+	// Get container dimensions with multiple fallbacks
+	let w = container.clientWidth || container.offsetWidth || window.innerWidth;
+	let h = container.clientHeight || container.offsetHeight || window.innerHeight;
+	
+	// CRITICAL: Enforce minimum dimensions to prevent collapse
+	// This prevents the scene from breaking during extreme zoom
+	const minW = 300;
+	const minH = 200;
+	
+	if (w < minW || h < minH) {
+		console.warn(`⚠️  Container too small (${w}x${h}), enforcing minimums`);
+		w = Math.max(w, minW);
+		h = Math.max(h, minH);
+		
+		// Force container to maintain minimum size
+		container.style.minWidth = `${minW}px`;
+		container.style.minHeight = `${minH}px`;
+	}
+	
+	// Update camera aspect ratio
 	camera.aspect = w / h;
 	camera.updateProjectionMatrix();
+	
+	// Update renderer size
 	const dpr = Math.min(window.devicePixelRatio || 1, 2);
 	renderer.setPixelRatio(dpr);
 	renderer.setSize(w, h, false);
+	
+	// Ensure canvas fills container
+	if (renderer.domElement) {
+		renderer.domElement.style.width = '100%';
+		renderer.domElement.style.height = '100%';
+		renderer.domElement.style.display = 'block';
+	}
+	
+	console.log(`📐 Resize: ${w}x${h}, aspect: ${camera.aspect.toFixed(2)}`);
+}
+
+// Add visual viewport resize listener for better zoom handling
+let resizeTimeout;
+function handleResize() {
+	// Debounce resize events to avoid too many updates
+	clearTimeout(resizeTimeout);
+	resizeTimeout = setTimeout(() => {
+		onWindowResize();
+		// Refit camera if cards exist to maintain proper framing
+		if (cards.length > 0) {
+			try {
+				fitCameraToCards();
+			} catch (err) {
+				console.warn('Resize camera fit failed:', err);
+			}
+		}
+	}, 100);
 }
 
 function animate() {
@@ -577,11 +639,15 @@ export async function updateFromGameState(gameState) {
 	}
 
 	// Create missing cards
+	let newCardsCreated = false;
 	gameState.cards.forEach((c, idx) => {
 		let existing = cards.find((x) => x.id === c.id);
 		if (!existing) {
 			const inst = createCardInstance(c.id, c.value, idx, total);
-			if (inst) cards.push(inst);
+			if (inst) {
+				cards.push(inst);
+				newCardsCreated = true;
+			}
 		}
 	});
 	
@@ -629,10 +695,15 @@ export async function updateFromGameState(gameState) {
 		inputLockTimer = null;
 	}
 
-	// Re-frame camera to fit all cards using settings from CAMERA_CONFIG
-	try {
-		fitCameraToCards();
-	} catch (err) {
-		console.warn('fitCameraToCards failed:', err);
+	// Re-frame camera only when new cards were created
+	// Don't reframe on every state update (causes flashing)
+	if (newCardsCreated) {
+		try {
+			fitCameraToCards();
+			// Force a resize update to ensure aspect ratio is correct
+			onWindowResize();
+		} catch (err) {
+			console.warn('fitCameraToCards failed:', err);
+		}
 	}
 }

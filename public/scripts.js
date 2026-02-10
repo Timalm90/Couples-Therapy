@@ -157,10 +157,15 @@ window.startGame = (playerCount) => {
 };
 
 // Update Color Background depending on active Player
-
+// Re-enabled with smooth transition to avoid jarring flash
 function updateActivePlayerBackground(gameState) {
   const grid = document.getElementById("cardGrid");
   if (!grid) return;
+
+  // Add transition on first call if not already present
+  if (!grid.style.transition) {
+    grid.style.transition = 'background-color 0.5s ease';
+  }
 
   const activePlayer = gameState.players[gameState.activePlayerIndex];
   grid.style.backgroundColor = activePlayer.color;
@@ -171,7 +176,8 @@ gameClient.onGameStateUpdate = (gameState) => {
   currentGameState = gameState;
 
   updateGameInfo(gameState);
-  updateActivePlayerBackground(gameState);
+  updateActivePlayerBackground(gameState); // Re-enabled with smooth transition
+  
   // Try to update 3D scene; fall back to DOM grid rendering if it fails
   try {
     updateFromGameState(gameState);
