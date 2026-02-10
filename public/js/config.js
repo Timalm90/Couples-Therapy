@@ -68,7 +68,9 @@ export const ASSET_PATHS = {
 // ANIMATION SETTINGS
 // ═══════════════════════════════════════════════════════════════════════════
 export const ANIMATION_CONFIG = {
-	FLIP_DURATION: 700, // milliseconds
+	FLIP_DURATION: 500, // milliseconds
+	FLIP_TEXTURE_SWAP_POINT: 0.5, // When to swap texture during flip (0.0-1.0)
+	                               // 0.5 = halfway, 0.3 = earlier, 0.7 = later
 	BACKGROUND_TRANSITION: '0.5s ease',
 	CONFETTI_FADE_DURATION: 800, // milliseconds
 	RESIZE_DEBOUNCE: 100 // milliseconds

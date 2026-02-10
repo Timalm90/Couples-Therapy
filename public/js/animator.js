@@ -88,27 +88,36 @@ export function animateCardFlip(cardObj, toFaceUp, onTextureUpdate) {
   console.log(`🎬 Playing flip animation for card ${cardObj.id}: ${toFaceUp ? 'FACE UP' : 'FACE DOWN'}`);
 
   return new Promise((resolve) => {
-    // Update texture immediately before starting animation
-    if (onTextureUpdate) {
-      onTextureUpdate(cardObj, toFaceUp);
-    }
-    
     // Reset the animation to start
     cardObj.mixer.stopAllAction();
     cardObj.flipAction.reset();
     
+    // Calculate timeScale to match desired duration
+    const clipDuration = cardObj.flipAction.getClip().duration;
+    const desiredDuration = ANIMATION_CONFIG.FLIP_DURATION / 1000; // Convert ms to seconds
+    const baseTimeScale = clipDuration / desiredDuration;
+    
     // Set direction based on whether we're flipping up or down
-    cardObj.flipAction.timeScale = toFaceUp ? 1 : -1;
+    cardObj.flipAction.timeScale = toFaceUp ? baseTimeScale : -baseTimeScale;
     
     // If flipping down (reversed), start from the end
     if (!toFaceUp) {
-      cardObj.flipAction.time = cardObj.flipAction.getClip().duration;
+      cardObj.flipAction.time = clipDuration;
     }
     
     // Play the animation
     cardObj.flipAction.play();
     
-    console.log(`   ▶️  Animation started: timeScale=${cardObj.flipAction.timeScale}, time=${cardObj.flipAction.time.toFixed(2)}s`);
+    console.log(`   ▶️  Animation started: timeScale=${cardObj.flipAction.timeScale.toFixed(2)}, duration=${desiredDuration.toFixed(2)}s (FBX: ${clipDuration.toFixed(2)}s)`);
+    
+    // Schedule texture swap at configured point during animation
+    const swapDelay = ANIMATION_CONFIG.FLIP_DURATION * ANIMATION_CONFIG.FLIP_TEXTURE_SWAP_POINT;
+    setTimeout(() => {
+      if (onTextureUpdate) {
+        onTextureUpdate(cardObj, toFaceUp);
+        console.log(`   🖼️  Texture swapped at ${(ANIMATION_CONFIG.FLIP_TEXTURE_SWAP_POINT * 100).toFixed(0)}% of animation`);
+      }
+    }, swapDelay);
     
     // Listen for animation completion
     const onFinished = (event) => {
@@ -120,13 +129,12 @@ export function animateCardFlip(cardObj, toFaceUp, onTextureUpdate) {
     };
     cardObj.mixer.addEventListener('finished', onFinished);
     
-    // Safety timeout in case the event doesn't fire
-    const duration = cardObj.flipAction.getClip().duration;
+    // Safety timeout - use ACTUAL desired duration
     setTimeout(() => {
       cardObj.mixer.removeEventListener('finished', onFinished);
-      console.log(`   ⏱️  Animation timeout (${duration}s) for card ${cardObj.id}`);
+      console.log(`   ⏱️  Animation timeout (${desiredDuration.toFixed(2)}s) for card ${cardObj.id}`);
       resolve();
-    }, (duration * 1000) + 100);
+    }, ANIMATION_CONFIG.FLIP_DURATION + 100); // Use config value + small buffer
   });
 }
 

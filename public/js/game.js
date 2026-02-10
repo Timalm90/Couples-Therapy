@@ -3,33 +3,29 @@
  * Main entry point - coordinates all subsystems
  */
 
-import gameClient from './client.js';
-import { 
-  updateGameInfo, 
-  updateActivePlayerBackground, 
+import gameClient from "./client.js";
+import {
+  updateGameInfo,
+  updateActivePlayerBackground,
   updateConnectionStatus,
   showError,
   showStartingPlaceholder,
   hideStartingPlaceholder,
-  showWinPopup
-} from './ui.js';
-import { 
-  launchFullscreenConfetti, 
-  stopFullscreenConfetti 
-} from './animator.js';
-import { 
-  initRenderer, 
-  setCardsArray,
-  triggerResize
-} from './renderer.js';
-import { 
-  initCardManager, 
+  showWinPopup,
+} from "./ui.js";
+import {
+  launchFullscreenConfetti,
+  stopFullscreenConfetti,
+} from "./animator.js";
+import { initRenderer, setCardsArray, triggerResize } from "./renderer.js";
+import {
+  initCardManager,
   updateFromGameState,
   getCards,
   isInputLocked,
-  lockInput
-} from './cardManager.js';
-import { INPUT_CONFIG } from './config.js';
+  lockInput,
+} from "./cardManager.js";
+import { INPUT_CONFIG } from "./config.js";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GAME STATE
@@ -42,14 +38,14 @@ let currentGameState = null;
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function init() {
-  console.log('🎮 Initializing game...');
+  console.log("🎮 Initializing game...");
 
   // Connect to server
   gameClient.connect();
 
   // Initialize renderer
   const { scene, camera, renderer } = initRenderer(handleCardClick);
-  
+
   // Initialize card manager
   await initCardManager(scene, camera);
 
@@ -58,7 +54,7 @@ async function init() {
   gameClient.onError = handleError;
   gameClient.onGameStateUpdate = handleGameStateUpdate;
 
-  console.log('✅ Game initialized');
+  console.log("✅ Game initialized");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -66,20 +62,20 @@ async function init() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function handleCardClick(cardId) {
-  if (!currentGameState || currentGameState.status !== 'playing') {
+  if (!currentGameState || currentGameState.status !== "playing") {
     return;
   }
 
   if (isInputLocked()) {
-    console.log('⏸️  Input locked, ignoring click');
+    console.log("⏸️  Input locked, ignoring click");
     return;
   }
 
-  console.log('🃏 Card clicked:', cardId);
-  
+  console.log("🃏 Card clicked:", cardId);
+
   // Lock input to prevent double-clicks
   lockInput(INPUT_CONFIG.LOCK_TIMEOUT);
-  
+
   // Send flip request to server
   gameClient.flipCard(cardId);
 }
@@ -93,37 +89,37 @@ function handleError(errorMessage) {
 }
 
 async function handleGameStateUpdate(gameState) {
-  console.log('📥 Game state update:', gameState);
+  console.log("📥 Game state update:", gameState);
   currentGameState = gameState;
 
   // Update UI
   updateGameInfo(gameState);
   updateActivePlayerBackground(gameState);
-  
+
   // Hide starting placeholder if present
   hideStartingPlaceholder();
 
   // Update 3D scene
   try {
     await updateFromGameState(gameState);
-    
+
     // Update renderer's card array reference
     setCardsArray(getCards());
-    
+
     // Trigger resize to ensure proper framing
     triggerResize();
   } catch (err) {
-    console.error('❌ Failed to update scene:', err);
-    showError('Failed to update game display');
+    console.error("❌ Failed to update scene:", err);
+    showError("Failed to update game display");
   }
 
   // Show win popup if game is won
-  if (gameState.status === 'won') {
+  if (gameState.status === "won") {
     showWinPopup(
       gameState,
       startGame, // onPlayAgain callback
       () => launchFullscreenConfetti(160), // onConfettiStart
-      stopFullscreenConfetti // onConfettiStop
+      stopFullscreenConfetti, // onConfettiStop
     );
   }
 }
@@ -133,7 +129,7 @@ async function handleGameStateUpdate(gameState) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function startGame(playerCount) {
-  console.log('🎮 Starting new game with', playerCount, 'players');
+  console.log("🎮 Starting new game with", playerCount, "players");
 
   // Reset game state
   currentGameState = null;
@@ -142,9 +138,9 @@ function startGame(playerCount) {
   showStartingPlaceholder();
 
   // Update game info
-  const info = document.getElementById('gameInfo');
+  const info = document.getElementById("gameInfo");
   if (info) {
-    info.textContent = 'Creating new game...';
+    info.textContent = "Creating new game...";
   }
 
   // Reset game ID in client
