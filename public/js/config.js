@@ -14,21 +14,21 @@ export const CAMERA_CONFIG = {
 	// Camera tilt angle (in degrees) - How much the camera looks down at the cards
 	// 0° = straight ahead, 90° = directly overhead
 	// Recommended range: 20-45 degrees. Default: 30
-	TILT_ANGLE: 90,
+	TILT_ANGLE: 85,
 	
 	// Camera distance multiplier when auto-framing cards
 	// Higher = camera pulls back further, Lower = camera gets closer
 	// Recommended range: 1.0-1.3. Default: 1.15
-	PADDING: 1.1,
+	PADDING: 1.2,
 	
 	// Card spacing in 3D units
 	// Higher = more space between cards, Lower = cards closer together
 	// Recommended range: 2.5-4.0. Default: 3.2
-	CARD_SPACING: 1.7,
+	CARD_SPACING: 2.5,
 	
 	// Camera position offset (applied after auto-framing)
 	OFFSET_X: 0,
-	OFFSET_Y: 2,
+	OFFSET_Y: 0,
 	OFFSET_Z: 0,
 };
 
