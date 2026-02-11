@@ -5,8 +5,14 @@
 body {
   font-family: Arial, Helvetica, sans-serif;
   margin: 0;
-  background: #1a1a1a;
-  color: #fff;
+  background: linear-gradient(
+    135deg,
+    #ffd1d9 0%,
+    #fff2b8 35%,
+    #d6e8ff 70%,
+    #d9f5d9 100%
+  );
+  color: black;
 }
 
 .app {
@@ -29,23 +35,38 @@ body {
 .header h1 {
   font-family: "Love Ya Like A Sister", cursive;
   margin: 0;
-  color: lightblue;
+  color: black;
   font-size: 3.5rem;
   text-align: center;
 }
 
 .board {
   height: 100%;
-  background: #111;
+  background: white;
   padding: 2%;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: auto;
+  position: relative;
+  transition: background-color 0.4s ease;
+}
+
+/* Blur only the board's background color using a pseudo-element so children remain sharp */
+.board::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: inherit; /* inherit the active player color */
+  filter: blur(10px);
+  transform: translateZ(0);
 }
 
 .panel {
-  background: #2a2a2a;
+  background: lemonchiffon;
   border-radius: 12px;
   padding: 16px;
 }
@@ -60,7 +81,7 @@ body {
   background: #f44336;
   border-radius: 10px;
 }
-
+/* Player selection grid and buttons */
 .player-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -80,10 +101,6 @@ button {
   font-weight: 700;
 }
 
-/* =========================
-   Player color buttons
-   ========================= */
-
 .player-btn {
   color: #fff;
   font-weight: 700;
@@ -91,27 +108,16 @@ button {
     transform 0.15s ease,
     filter 0.15s ease;
 }
-
-/* Player colors */
-.player-red {
-  background: #e53935;
-}
-
-.player-yellow {
-  background: #fbc02d;
-  color: #111;
-}
-
 .player-blue {
-  background: #1e88e5;
+  background: #7fb3ff;
 }
 
 .player-green {
-  background: #43a047;
+  background: #8bd48b;
 }
 
 .player-red {
-  background: #e53935;
+  background: #ff6b81;
 }
 .player-red:hover {
   transform: scale(1.05);
@@ -120,7 +126,7 @@ button {
 }
 
 .player-yellow {
-  background: #fbc02d;
+  background: #ffd54a;
   color: #111;
 }
 .player-yellow:hover {
@@ -335,6 +341,22 @@ button:disabled {
   max-width: 1200px;
   min-height: 72vh; /* large area for the 3D scene */
   margin: 0 auto;
+}
+
+/* make grid transparent so board background (blurred) shows through */
+#cardGrid {
+  background: transparent;
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure canvas sits above the blurred background */
+#cardGrid canvas {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 2 !important;
 }
 
 .card {

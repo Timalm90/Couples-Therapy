@@ -1,15 +1,13 @@
-
-import { nanoid } from 'nanoid';
-import shuffle from './shuffle.js';
+import { nanoid } from "nanoid";
+import shuffle from "./shuffle.js";
 
 export default function createGameState(playerCount = 1) {
-
-    if (playerCount < 1 || playerCount > 4) {
-    throw new Error('Player count must be between 1 and 4');
+  if (playerCount < 1 || playerCount > 4) {
+    throw new Error("Player count must be between 1 and 4");
   }
 
-  // Player colors
-  const colors = ['red', 'yellow', 'blue', 'green'];
+  // Player colors (pastel hex for the board/frame)
+  const colors = ["#ff6b81", "#ffd54a", "#7fb3ff", "#8bd48b"];
 
   // Create players
   const players = [];
@@ -17,27 +15,27 @@ export default function createGameState(playerCount = 1) {
     players.push({
       id: nanoid(8),
       color: colors[i],
-      score: 0
+      score: 0,
     });
   }
 
   // Card values (A-H = 8 pairs = 16 cards for 4x4 grid)
-  const cardValues = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-  
+  const cardValues = ["A", "B", "C", "D", "E", "F", "G", "H"];
+
   // Create card pairs
   const cards = [];
-  cardValues.forEach(value => {
+  cardValues.forEach((value) => {
     // First card of the pair
     cards.push({
       id: nanoid(8),
       value: value,
-      isMatched: false
+      isMatched: false,
     });
     // Second card of the pair
     cards.push({
       id: nanoid(8),
       value: value,
-      isMatched: false
+      isMatched: false,
     });
   });
 
@@ -52,6 +50,6 @@ export default function createGameState(playerCount = 1) {
     activePlayerIndex: 0, // First player starts
     flippedCardIds: [],
     lockBoard: false,
-    status: 'playing' // 'playing' or 'won'
+    status: "playing", // 'playing' or 'won'
   };
 }

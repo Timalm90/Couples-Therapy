@@ -37,16 +37,34 @@ export function updateGameInfo(gameState) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function updateActivePlayerBackground(gameState) {
-  const grid = document.getElementById("cardGrid");
-  if (!grid) return;
+  const board = document.querySelector(".board");
+  if (!board) return;
 
   // Add smooth transition on first call
-  if (!grid.style.transition) {
-    grid.style.transition = `background-color ${ANIMATION_CONFIG.BACKGROUND_TRANSITION}`;
+  if (!board.style.transition) {
+    board.style.transition = `background-color ${ANIMATION_CONFIG.BACKGROUND_TRANSITION}`;
   }
 
   const activePlayer = gameState.players[gameState.activePlayerIndex];
-  grid.style.backgroundColor = activePlayer.color;
+
+  // Map logical player color names to the visual board colors (pastel)
+  const BOARD_COLOR_MAP = {
+    red: "#ff6b81",
+    yellow: "#ffd54a",
+    blue: "#7fb3ff",
+    green: "#8bd48b",
+  };
+
+  const boardColor = BOARD_COLOR_MAP[activePlayer.color] || activePlayer.color;
+  board.style.backgroundColor = boardColor;
+
+  // keep possible blurred element in sync if present
+  try {
+    const blurEl = board.querySelector(".frame-blur");
+    if (blurEl) blurEl.style.backgroundColor = activePlayer.color;
+  } catch (e) {
+    // ignore
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
