@@ -1,20 +1,13 @@
 /**
  * Card Manager Module
- * Handles card instance creation, positioning, textures, state management, and shadows
+ * Handles card instance creation, positioning, textures, and state management
  */
 
 import * as THREE from "https://esm.sh/three@0.152.2";
 import { FBXLoader } from "https://esm.sh/three@0.152.2/examples/jsm/loaders/FBXLoader.js";
 import * as SkeletonUtils from "https://esm.sh/three@0.152.2/examples/jsm/utils/SkeletonUtils.js";
-import {
-  CAMERA_CONFIG,
-  CARD_CONFIG,
-  ASSET_PATHS,
-  LIQUID_GLASS_CONFIG,
-  RENDER_CONFIG,
-} from "./config.js";
+import { CAMERA_CONFIG, CARD_CONFIG, ASSET_PATHS } from "./config.js";
 import { animateCardFlip } from "./animator.js";
-import { createLiquidGlassMaterial } from "./liquidglassshader.js";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MODULE STATE
@@ -33,7 +26,6 @@ const texLoader = new THREE.TextureLoader();
 // References to other modules (set during init)
 let scene = null;
 let camera = null;
-let envMap = null;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // INITIALIZATION
@@ -43,12 +35,10 @@ let envMap = null;
  * Initialize card manager and load assets
  * @param {THREE.Scene} sceneRef - Three.js scene reference
  * @param {THREE.Camera} cameraRef - Three.js camera reference
- * @param {THREE.Texture} envMapRef - Environment map for reflections
  */
-export async function initCardManager(sceneRef, cameraRef, envMapRef) {
+export async function initCardManager(sceneRef, cameraRef) {
   scene = sceneRef;
   camera = cameraRef;
-  envMap = envMapRef;
 
   // Load FBX model
   try {
@@ -148,7 +138,7 @@ function ensureFrontTexture(value) {
 function setFrontTextureForMesh(cardObj, arg) {
   // `arg` may be either a boolean `toFaceUp` (from animator) or
   // a texture value/index. If boolean and true, use the card's value;
-  // if boolean and false, assign the back texture/shader.
+  // if boolean and false, assign the back texture.
   const front = cardObj.frontMesh;
   if (!front) return;
 
@@ -156,29 +146,21 @@ function setFrontTextureForMesh(cardObj, arg) {
   if (isBool) {
     const toFaceUp = arg;
     if (!toFaceUp) {
-      // Face-down: show the back texture on the FRONT mesh so the
-      // visual appearance matches the back, but do NOT apply the
-      // liquid-glass shader here. The true glass shader is applied
-      // to the `backMesh` and must remain unchanged.
+      // Face-down: show back texture on front mesh to match visual
       front.material = front.material
         ? front.material.clone()
-        : new THREE.MeshStandardMaterial();
+        : new THREE.MeshBasicMaterial();
       front.material.map = backTexture;
-      front.material.side = THREE.DoubleSide;
-      front.material.metalness = 0.1;
-      front.material.roughness = 0.8;
       front.material.needsUpdate = true;
       return;
     }
     // Face-up: use the card object's current value
     const value = cardObj.value;
     ensureFrontTexture(value).then((tex) => {
-      front.material = new THREE.MeshStandardMaterial({
-        map: tex,
-        side: THREE.DoubleSide,
-        metalness: 0.1,
-        roughness: 0.8,
-      });
+      front.material = front.material
+        ? front.material.clone()
+        : new THREE.MeshBasicMaterial();
+      front.material.map = tex;
       front.material.needsUpdate = true;
     });
     return;
@@ -187,12 +169,10 @@ function setFrontTextureForMesh(cardObj, arg) {
   // Non-boolean: treat arg as the value/index to load
   const value = arg;
   ensureFrontTexture(value).then((tex) => {
-    front.material = new THREE.MeshStandardMaterial({
-      map: tex,
-      side: THREE.DoubleSide,
-      metalness: 0.1,
-      roughness: 0.8,
-    });
+    front.material = front.material
+      ? front.material.clone()
+      : new THREE.MeshBasicMaterial();
+    front.material.map = tex;
     front.material.needsUpdate = true;
   });
 }
@@ -209,12 +189,6 @@ function createCardInstance(cardId, value, index, total) {
   clone.name = `card_${cardId}`;
   clone.userData.cardId = cardId;
 
-  // Enable shadow casting for the entire card
-  if (RENDER_CONFIG.SHADOWS_ENABLED) {
-    clone.castShadow = true;
-    clone.receiveShadow = false; // Cards don't receive shadows from other cards
-  }
-
   // Find front and back meshes
   let frontMesh = null;
   let backMesh = null;
@@ -223,13 +197,6 @@ function createCardInstance(cardId, value, index, total) {
   clone.traverse((node) => {
     if (!node.isMesh && !node.isSkinnedMesh) return;
     allMeshes.push(node);
-
-    // Enable shadows on all meshes
-    if (RENDER_CONFIG.SHADOWS_ENABLED) {
-      node.castShadow = true;
-      node.receiveShadow = false;
-    }
-
     const lname = (node.name || "").toLowerCase();
     if (!frontMesh && /front/.test(lname)) frontMesh = node;
     else if (!backMesh && /back/.test(lname)) backMesh = node;
@@ -261,12 +228,6 @@ function createCardInstance(cardId, value, index, total) {
     console.log(
       `   Front mesh: ${frontMesh?.name || "none"}, Back mesh: ${backMesh?.name || "none"}`,
     );
-    console.log(
-      `   Liquid glass shader: ${LIQUID_GLASS_CONFIG.ENABLED ? "ENABLED" : "DISABLED"}`,
-    );
-    console.log(
-      `   Shadows: ${RENDER_CONFIG.SHADOWS_ENABLED ? "ENABLED" : "DISABLED"}`,
-    );
   }
 
   // Auto-scale
@@ -285,53 +246,27 @@ function createCardInstance(cardId, value, index, total) {
   // Apply materials
   allMeshes.forEach((mesh, idx) => {
     if (mesh.material) {
+      mesh.material = mesh.material.clone();
+      mesh.material.side = THREE.DoubleSide;
+
       if (mesh === backMesh) {
-        // Apply liquid glass shader to back mesh
-        if (LIQUID_GLASS_CONFIG.ENABLED && envMap) {
-          const isSkinnedMesh = mesh.isSkinnedMesh || false;
-          mesh.material = createLiquidGlassMaterial(envMap, isSkinnedMesh);
-          // Ensure glass occludes the front when face-down
-          mesh.material.depthWrite = true;
-          mesh.material.depthTest = true;
-          mesh.renderOrder = 0;
-          if (index === 0) {
-            console.log(
-              `  💧 Applied LIQUID GLASS SHADER to: ${mesh.name} (skinned: ${isSkinnedMesh})`,
-            );
-          }
-        } else {
-          mesh.material = new THREE.MeshStandardMaterial({
-            map: backTexture,
-            side: THREE.DoubleSide,
-            metalness: 0.1,
-            roughness: 0.8,
-          });
-          if (index === 0) {
-            console.log(`  ✓ Applied back texture to: ${mesh.name}`);
-          }
+        mesh.material.map = backTexture;
+        mesh.material.color = new THREE.Color(0xffffff);
+        if (index === 0) {
+          console.log(`  ✓ Applied back texture to: ${mesh.name}`);
         }
       } else if (mesh === frontMesh) {
-        // Front mesh uses standard material
         const tex = frontTextures.get(value) || backTexture;
-        mesh.material = new THREE.MeshStandardMaterial({
-          map: tex,
-          side: THREE.DoubleSide,
-          metalness: 0.1,
-          roughness: 0.8,
-        });
-        // Render front after back so opaque front doesn't show through glass
-        mesh.renderOrder = 1;
+        mesh.material.map = tex;
+        mesh.material.color = new THREE.Color(0xffffff);
         if (index === 0) {
           console.log(`  ✓ Applied front texture to: ${mesh.name}`);
         }
       } else {
-        mesh.material = new THREE.MeshStandardMaterial({
-          side: THREE.DoubleSide,
-          metalness: 0.1,
-          roughness: 0.8,
-        });
-        mesh.renderOrder = 1;
+        mesh.material.color = new THREE.Color(0xffffff);
       }
+
+      mesh.material.needsUpdate = true;
     }
   });
 
@@ -516,14 +451,16 @@ export async function updateFromGameState(gameState) {
       local.isMatched = true;
       local.mesh.position.y = CARD_CONFIG.MATCH_RAISE_HEIGHT;
       local.mesh.traverse((node) => {
-        if (node.isMesh && node.material && node.material.color) {
-          if (!node.material.origColor) {
+        if (node.isMesh) {
+          if (!node.material.origColor && node.material.color) {
             node.material.origColor = node.material.color.clone();
           }
-          node.material.color.lerp(
-            new THREE.Color(CARD_CONFIG.MATCH_TINT_COLOR),
-            CARD_CONFIG.MATCH_TINT_AMOUNT,
-          );
+          if (node.material.color) {
+            node.material.color.lerp(
+              new THREE.Color(CARD_CONFIG.MATCH_TINT_COLOR),
+              CARD_CONFIG.MATCH_TINT_AMOUNT,
+            );
+          }
         }
       });
     }

@@ -14,14 +14,51 @@ import applyMove, { unlockBoard } from "./game/applyMove.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Global process-level error handlers to catch unhandled rejections
+// and uncaught exceptions. These log the error and exit the process
+// to avoid running in an inconsistent state. If you prefer a graceful
+// shutdown, we can wire these to close the HTTP server and WebSocket
+// server before exiting.
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+  // It's safest to exit and let a supervisor restart the process.
+  // Delay exit slightly to allow logs to flush.
+  setTimeout(() => process.exit(1), 100);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("❌ Uncaught Exception:", err);
+  // As above, exit to avoid undefined behaviour.
+  setTimeout(() => process.exit(1), 100);
+});
+
 function sendGameState(ws, gameState) {
   const sanitized = sanitizeGameState(gameState);
-  ws.send(
-    JSON.stringify({
-      type: "GAME_STATE",
-      ...sanitized,
-    }),
-  );
+  safeSend(ws, {
+    type: "GAME_STATE",
+    ...sanitized,
+  });
+}
+
+// Safely send a payload to a WebSocket client. Guards against sending
+// on closed sockets and catches any synchronous send errors.
+function safeSend(ws, payload) {
+  if (!ws) return false;
+  try {
+    // `readyState === 1` means OPEN for ws library
+    if (ws.readyState !== 1) {
+      console.warn("Attempted to send on non-open WebSocket");
+      return false;
+    }
+
+    const data =
+      typeof payload === "string" ? payload : JSON.stringify(payload);
+    ws.send(data);
+    return true;
+  } catch (err) {
+    console.error("❌ Failed to send message to client:", err);
+    return false;
+  }
 }
 
 export default function createServer(port = 8000) {
@@ -79,12 +116,10 @@ export default function createServer(port = 8000) {
           const validation = validateNewGame(message);
 
           if (!validation.valid) {
-            ws.send(
-              JSON.stringify({
-                type: "ERROR",
-                message: validation.error,
-              }),
-            );
+            safeSend(ws, {
+              type: "ERROR",
+              message: validation.error,
+            });
             return;
           }
 
@@ -104,36 +139,30 @@ export default function createServer(port = 8000) {
           const validation = validateFlipCard(message);
 
           if (!validation.valid) {
-            ws.send(
-              JSON.stringify({
-                type: "ERROR",
-                message: validation.error,
-              }),
-            );
+            safeSend(ws, {
+              type: "ERROR",
+              message: validation.error,
+            });
             return;
           }
 
           const gameState = gameManager.getGame(validation.gameId);
 
           if (!gameState) {
-            ws.send(
-              JSON.stringify({
-                type: "ERROR",
-                message: "Game not found",
-              }),
-            );
+            safeSend(ws, {
+              type: "ERROR",
+              message: "Game not found",
+            });
             return;
           }
 
           const result = applyMove(gameState, validation.cardId);
 
           if (result.error) {
-            ws.send(
-              JSON.stringify({
-                type: "ERROR",
-                message: result.error,
-              }),
-            );
+            safeSend(ws, {
+              type: "ERROR",
+              message: result.error,
+            });
             return;
           }
 
@@ -158,20 +187,16 @@ export default function createServer(port = 8000) {
         }
 
         // ===== UNKNOWN MESSAGE =====
-        ws.send(
-          JSON.stringify({
-            type: "ERROR",
-            message: `Unknown message type: ${message.type}`,
-          }),
-        );
+        safeSend(ws, {
+          type: "ERROR",
+          message: `Unknown message type: ${message.type}`,
+        });
       } catch (error) {
         console.error("❌ Error processing message:", error);
-        ws.send(
-          JSON.stringify({
-            type: "ERROR",
-            message: "Invalid message format",
-          }),
-        );
+        safeSend(ws, {
+          type: "ERROR",
+          message: "Invalid message format",
+        });
       }
     });
 

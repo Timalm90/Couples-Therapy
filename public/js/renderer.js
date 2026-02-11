@@ -78,6 +78,16 @@ export async function initRenderer(onCardClick) {
     alpha: RENDER_CONFIG.ALPHA,
   });
 
+  // Use physically correct lighting and sensible color/tone settings
+  renderer.physicallyCorrectLights = true;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = HDRI_CONFIG.INTENSITY || 1.0;
+
+  // PMREM generator for converting equirectangular HDR to a cube-like env map
+  const pmremGenerator = new THREE.PMREMGenerator(renderer);
+  pmremGenerator.compileEquirectangularShader();
+
   // Enable shadows
   if (RENDER_CONFIG.SHADOWS_ENABLED) {
     renderer.shadowMap.enabled = true;
@@ -108,32 +118,50 @@ export async function initRenderer(onCardClick) {
 
   // Initialize scene
   scene = new THREE.Scene();
-  
+
   // Load HDRI if enabled
   if (HDRI_CONFIG.ENABLED) {
     console.log("🌅 Loading HDRI environment...");
     try {
-      envMap = await loadHDRI(HDRI_CONFIG.PATH);
+      const equirect = await loadHDRI(HDRI_CONFIG.PATH);
+      // Convert to PMREM (suitable for sampling as a cube texture)
+      envMap = pmremGenerator.fromEquirectangular(equirect).texture;
       scene.environment = envMap;
-      
+
       if (HDRI_CONFIG.SHOW_AS_BACKGROUND) {
-        scene.background = envMap;
+        // Use the original equirectangular texture as the visible background
+        scene.background = equirect;
         scene.backgroundBlurriness = HDRI_CONFIG.BACKGROUND_BLUR;
+        // Do not dispose equirect since it's used as background
       } else {
         scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
+        if (equirect.dispose) equirect.dispose();
       }
-      
-      console.log("✅ HDRI loaded successfully");
+
+      console.log("✅ HDRI loaded and PMREM generated successfully");
     } catch (err) {
       console.warn("⚠️  Failed to load HDRI, using fallback:", err);
       scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
-      envMap = createFallbackEnvMap();
+      // Create a simple equirectangular fallback and convert to PMREM
+      const fallbackEquirect = createFallbackEnvMap();
+      envMap = pmremGenerator.fromEquirectangular(fallbackEquirect).texture;
+      // fallbackEquirect is not used as visible background here, dispose it
+      if (fallbackEquirect.dispose) fallbackEquirect.dispose();
       scene.environment = envMap;
     }
   } else {
     scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
-    envMap = createFallbackEnvMap();
+    const fallbackEquirect = createFallbackEnvMap();
+    envMap = pmremGenerator.fromEquirectangular(fallbackEquirect).texture;
+    if (fallbackEquirect.dispose) fallbackEquirect.dispose();
     scene.environment = envMap;
+  }
+
+  // Dispose PMREM generator to free resources
+  try {
+    pmremGenerator.dispose();
+  } catch (e) {
+    // ignore
   }
 
   // Initialize camera
@@ -183,7 +211,7 @@ export async function initRenderer(onCardClick) {
       LIGHTING_CONFIG.SHADOW_LIGHT_POSITION.y,
       LIGHTING_CONFIG.SHADOW_LIGHT_POSITION.z,
     );
-    
+
     shadowLight.castShadow = true;
     shadowLight.shadow.mapSize.width = RENDER_CONFIG.SHADOW_MAP_SIZE;
     shadowLight.shadow.mapSize.height = RENDER_CONFIG.SHADOW_MAP_SIZE;
@@ -195,7 +223,7 @@ export async function initRenderer(onCardClick) {
     shadowLight.shadow.camera.bottom = -15;
     shadowLight.shadow.bias = RENDER_CONFIG.SHADOW_BIAS;
     shadowLight.shadow.radius = RENDER_CONFIG.SHADOW_RADIUS;
-    
+
     scene.add(shadowLight);
     console.log("💡 Shadow-casting light added");
   }
@@ -245,7 +273,7 @@ function loadHDRI(path) {
       undefined,
       (error) => {
         reject(error);
-      }
+      },
     );
   });
 }
@@ -256,21 +284,21 @@ function loadHDRI(path) {
  */
 function createFallbackEnvMap() {
   const size = 256;
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  
+  const ctx = canvas.getContext("2d");
+
   // Create a simple gradient
   const gradient = ctx.createLinearGradient(0, 0, 0, size);
-  gradient.addColorStop(0, '#87CEEB'); // Sky blue
-  gradient.addColorStop(1, '#E0F6FF'); // Light blue
+  gradient.addColorStop(0, "#87CEEB"); // Sky blue
+  gradient.addColorStop(1, "#E0F6FF"); // Light blue
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
-  
+
   const texture = new THREE.CanvasTexture(canvas);
   texture.mapping = THREE.EquirectangularReflectionMapping;
-  
+
   return texture;
 }
 
@@ -283,17 +311,17 @@ function createFallbackEnvMap() {
  */
 function createShadowCatcher() {
   const geometry = new THREE.PlaneGeometry(100, 100);
-  
+
   // Create custom shadow catcher material
   const material = new THREE.ShadowMaterial();
   material.opacity = 0.3; // Shadow darkness (0 = invisible, 1 = black)
-  
+
   shadowCatcher = new THREE.Mesh(geometry, material);
   shadowCatcher.rotation.x = -Math.PI / 2; // Rotate to be horizontal
   shadowCatcher.position.y = -0.01; // Slightly below cards to avoid z-fighting
   shadowCatcher.receiveShadow = true;
   shadowCatcher.name = "shadowCatcher";
-  
+
   scene.add(shadowCatcher);
   console.log("🎭 Shadow catcher plane added");
 }
@@ -312,8 +340,12 @@ function animate() {
   // Update liquid glass shaders if enabled
   if (LIQUID_GLASS_CONFIG.ENABLED && envMap) {
     cardsArray.forEach((card) => {
-      if (card.backMesh && card.backMesh.material && card.backMesh.material.uniforms) {
-        updateLiquidGlassShader(card.backMesh.material, delta);
+      if (
+        card.backMesh &&
+        card.backMesh.material &&
+        card.backMesh.material.uniforms
+      ) {
+        updateLiquidGlassShader(card.backMesh.material, delta, camera);
       }
     });
   }
@@ -451,13 +483,13 @@ export function triggerResize() {
  */
 export function setHDRIBackgroundVisible(visible) {
   if (!scene || !envMap) return;
-  
+
   if (visible) {
     scene.background = envMap;
     scene.backgroundBlurriness = HDRI_CONFIG.BACKGROUND_BLUR;
   } else {
     scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
   }
-  
-  console.log(`🌅 HDRI background ${visible ? 'shown' : 'hidden'}`);
+
+  console.log(`🌅 HDRI background ${visible ? "shown" : "hidden"}`);
 }
