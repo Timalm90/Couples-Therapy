@@ -353,12 +353,6 @@ function createCardInstance(cardId, value, index, total) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function fitCameraToCards() {
-  // DISABLED: Renderer handles camera positioning now
-  // This was causing bottom row clipping by overriding renderer's calculations
-  console.log('📷 fitCameraToCards: SKIPPED (using renderer camera setup)');
-  return;
-  
-  /* ORIGINAL CODE COMMENTED OUT
   if (!camera || cards.length === 0) return;
 
   const box = new THREE.Box3();
@@ -393,7 +387,6 @@ function fitCameraToCards() {
   console.log(
     `   Camera position: ${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)}, looking at ${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}`,
   );
-  */
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

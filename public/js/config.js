@@ -9,7 +9,7 @@
 export const CAMERA_CONFIG = {
 	// Field of View (in degrees) - Higher = wider view, Lower = more zoomed/telephoto
 	// Recommended range: 40-60 degrees. Default: 50
-	FOV: 90,
+	FOV: 60,
 	
 	// Camera tilt angle (in degrees) - How much the camera looks down at the cards
 	// 0° = straight ahead, 90° = directly overhead
@@ -28,7 +28,7 @@ export const CAMERA_CONFIG = {
 	
 	// Camera position offset (applied after auto-framing)
 	OFFSET_X: 0,
-	OFFSET_Y: 0,
+	OFFSET_Y: 2,
 	OFFSET_Z: 0,
 };
 
@@ -102,7 +102,7 @@ export const LIQUID_GLASS_CONFIG = {
 	// Reflectivity strength
 	// Higher = more mirror-like, Lower = more transparent
 	// Recommended range: 0.3-1.0
-	REFLECTIVITY: 0.5,
+	REFLECTIVITY: 1.0,
 	
 	// Fresnel power (edge glow effect)
 	// Higher = sharper edge highlight, Lower = softer
@@ -116,7 +116,7 @@ export const LIQUID_GLASS_CONFIG = {
 	
 	// Overall opacity
 	// Recommended range: 0.7-1.0
-	OPACITY: 0.05,
+	OPACITY: 0.65,
 	
 	// Chromatic aberration (rainbow edge effect)
 	// Higher = more color separation, 0 = no aberration

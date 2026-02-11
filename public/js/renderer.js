@@ -199,71 +199,26 @@ export async function initRenderer(onCardClick) {
     // ignore
   }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// FIXED CAMERA INITIALIZATION
-// ═══════════════════════════════════════════════════════════════════════════
+  // Initialize camera
+  const containerWidth = container.clientWidth || window.innerWidth;
+  const containerHeight = container.clientHeight || window.innerHeight;
 
-// Camera aspect should match the actual inner canvas aspect (after layout)
-const camInnerW = Math.max(1, container.clientWidth - FRAME_PADDING * 2);
-const camInnerH = Math.max(1, container.clientHeight - FRAME_PADDING * 2);
+  // Camera aspect should match the actual inner canvas aspect (after layout)
+  const camInnerW = Math.max(1, container.clientWidth - FRAME_PADDING * 2);
+  const camInnerH = Math.max(1, container.clientHeight - FRAME_PADDING * 2);
+  camera = new THREE.PerspectiveCamera(
+    CAMERA_CONFIG.FOV,
+    Math.max(0.0001, camInnerW / camInnerH),
+    0.1,
+    2000,
+  );
 
-camera = new THREE.PerspectiveCamera(
-  CAMERA_CONFIG.FOV,
-  Math.max(0.0001, camInnerW / camInnerH),
-  0.1,
-  2000,
-);
+  const angleRad = THREE.MathUtils.degToRad(CAMERA_CONFIG.TILT_ANGLE);
+  const cameraZ = 10;
+  const cameraY = Math.tan(angleRad) * cameraZ;
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CALCULATE CAMERA POSITION BASED ON TILT ANGLE
-// ═══════════════════════════════════════════════════════════════════════════
-
-const angleRad = THREE.MathUtils.degToRad(CAMERA_CONFIG.TILT_ANGLE);
-
-// For top-down view with slight angle:
-// - TILT_ANGLE = 90 → straight top-down
-// - TILT_ANGLE = 75 → slight angle (recommended for 3D feeling)
-// - TILT_ANGLE = 60 → more perspective
-
-// Calculate base camera distance to fit the grid
-// Assuming grid is roughly 6 units wide (adjust based on your grid size)
-const gridWidth = 6;  // Adjust this to match your actual grid width
-const gridHeight = 6; // Adjust this to match your actual grid height
-
-// Calculate distance needed to frame the grid
-const fovRad = THREE.MathUtils.degToRad(CAMERA_CONFIG.FOV);
-const aspect = camera.aspect;
-
-// Distance to fit width and height with padding
-const distanceForWidth = (gridWidth * CAMERA_CONFIG.PADDING) / (2 * Math.tan(fovRad / 2) * aspect);
-const distanceForHeight = (gridHeight * CAMERA_CONFIG.PADDING) / (2 * Math.tan(fovRad / 2));
-const baseDistance = Math.max(distanceForWidth, distanceForHeight);
-
-// Calculate Y and Z based on tilt angle
-const cameraZ = baseDistance * Math.cos(angleRad);
-const cameraY = baseDistance * Math.sin(angleRad);
-
-// Apply offsets
-const finalX = 0 + CAMERA_CONFIG.OFFSET_X;
-const finalY = cameraY + CAMERA_CONFIG.OFFSET_Y;
-const finalZ = cameraZ + CAMERA_CONFIG.OFFSET_Z;
-
-camera.position.set(finalX, finalY, finalZ);
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CRITICAL: LOOK AT THE CENTER OF THE GRID, NOT ORIGIN
-// ═══════════════════════════════════════════════════════════════════════════
-
-// If your cards are centered at origin (0, 0, 0), this is fine:
-const gridCenterX = 0;
-const gridCenterY = 0; // Cards are usually at Y=0
-const gridCenterZ = 0;
-
-camera.lookAt(gridCenterX, gridCenterY, gridCenterZ);
-
-console.log(`📷 Camera positioned at (${finalX.toFixed(2)}, ${finalY.toFixed(2)}, ${finalZ.toFixed(2)})`);
-console.log(`📷 Camera looking at (${gridCenterX}, ${gridCenterY}, ${gridCenterZ})`);
-
+  camera.position.set(0, cameraY, cameraZ);
+  camera.lookAt(0, 0, 0);
 
   // Lights
   const ambient = new THREE.AmbientLight(
