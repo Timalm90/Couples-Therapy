@@ -5,6 +5,24 @@
 
 import { ANIMATION_CONFIG } from "./config.js";
 
+// Map server color values (names or hex) to user-friendly labels
+const COLOR_LABEL = {
+  "#ff6b81": "red",
+  "#ffd54a": "yellow",
+  "#7fb3ff": "blue",
+  "#8bd48b": "green",
+  red: "red",
+  yellow: "yellow",
+  blue: "blue",
+  green: "green",
+};
+
+function normalizeLabel(col) {
+  if (!col) return col;
+  const key = String(col).toLowerCase();
+  return COLOR_LABEL[key] || col;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // GAME INFO DISPLAY
 // ═══════════════════════════════════════════════════════════════════════════
@@ -15,7 +33,7 @@ export function updateGameInfo(gameState) {
 
   const activePlayer = gameState.players[gameState.activePlayerIndex];
   const playerScores = gameState.players
-    .map((p) => `${p.color}: ${p.score}`)
+    .map((p) => `${normalizeLabel(p.color)}: ${p.score}`)
     .join(" | ");
 
   const isDebug = false; // Set to true to show game ID
@@ -26,7 +44,7 @@ export function updateGameInfo(gameState) {
     <strong>Status:</strong> ${gameState.status}<br>
     <strong>Active Player:</strong>
     <span style="color: ${activePlayer.color}">
-      ${activePlayer.color}
+      ${normalizeLabel(activePlayer.color)}
     </span><br>
     <strong>Scores:</strong> ${playerScores}
   `;
@@ -172,10 +190,10 @@ export function showWinPopup(
 
   const title = isDraw
     ? "It's a draw, you need more therapy!"
-    : ` Congratulation ${winners.map((w) => w.color).join(" & ")}! You are the winner of Couples Therapy!`;
+    : ` Congratulation ${winners.map((w) => normalizeLabel(w.color)).join(" & ")}! You are the winner of Couples Therapy!`;
 
   const scoreText = gameState.players
-    .map((p) => `${p.color}: ${p.score}`)
+    .map((p) => `${normalizeLabel(p.color)}: ${p.score}`)
     .join(" • ");
 
   const overlay = document.createElement("div");

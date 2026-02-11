@@ -16,7 +16,7 @@ import {
 } from "./config.js";
 
 import { updateAnimations } from "./animator.js";
-import { updateLiquidGlassShader } from "./liquidglassshader.js";
+import { updateLiquidGlassShader } from "./liquidGlassShader.js";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MODULE STATE

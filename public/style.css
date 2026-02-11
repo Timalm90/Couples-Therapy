@@ -5,14 +5,8 @@
 body {
   font-family: Arial, Helvetica, sans-serif;
   margin: 0;
-  background: linear-gradient(
-    135deg,
-    #ffd1d9 0%,
-    #fff2b8 35%,
-    #d6e8ff 70%,
-    #d9f5d9 100%
-  );
-  color: black;
+  background: #1a1a1a;
+  color: white;
 }
 
 .app {
@@ -35,14 +29,14 @@ body {
 .header h1 {
   font-family: "Love Ya Like A Sister", cursive;
   margin: 0;
-  color: black;
+  color: #87ceeb;
   font-size: 3.5rem;
   text-align: center;
 }
 
 .board {
   height: 100%;
-  background: white;
+  background: #111;
   padding: 2%;
   display: flex;
   align-items: center;
@@ -66,7 +60,7 @@ body {
 }
 
 .panel {
-  background: lemonchiffon;
+  background: #2a2a2a;
   border-radius: 12px;
   padding: 16px;
 }
@@ -119,16 +113,18 @@ button {
 .player-red {
   background: #ff6b81;
 }
+
+.player-yellow {
+  background: #ffd54a;
+  color: #111;
+}
+
 .player-red:hover {
   transform: scale(1.05);
   box-shadow: 0 0 20px rgba(229, 57, 53, 0.6);
   filter: brightness(1.1);
 }
 
-.player-yellow {
-  background: #ffd54a;
-  color: #111;
-}
 .player-yellow:hover {
   transform: scale(1.05);
   box-shadow: 0 0 20px rgba(251, 192, 45, 0.6);

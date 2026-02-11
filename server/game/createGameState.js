@@ -7,7 +7,7 @@ export default function createGameState(playerCount = 1) {
   }
 
   // Player colors (pastel hex for the board/frame)
-  const colors = ["#ff6b81", "#ffd54a", "#7fb3ff", "#8bd48b"];
+  const colors = ["red", "yellow", "blue", "green"];
 
   // Create players
   const players = [];
