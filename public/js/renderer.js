@@ -163,33 +163,33 @@ export async function initRenderer(onCardClick) {
 
       if (HDRI_CONFIG.SHOW_AS_BACKGROUND) {
         // Use the original equirectangular texture as the visible background
-        scene.background = equirect;
+scene.background = null;
         scene.backgroundBlurriness = HDRI_CONFIG.BACKGROUND_BLUR;
         // Do not dispose equirect since it's used as background
       } else {
-        scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
+scene.background = null;
         if (equirect.dispose) equirect.dispose();
       }
 
       console.log("✅ HDRI loaded and PMREM generated successfully");
     } catch (err) {
       console.warn("⚠️  Failed to load HDRI, using fallback:", err);
-      scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
+scene.background = null;
       // Create a simple equirectangular fallback and convert to PMREM
       const fallbackEquirect = createFallbackEnvMap();
       envMap = pmremGenerator.fromEquirectangular(fallbackEquirect).texture;
       // fallbackEquirect is not used as visible background here, dispose it
       if (fallbackEquirect.dispose) fallbackEquirect.dispose();
       scene.environment = envMap;
-      scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
+scene.background = null;
     }
   } else {
-    scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
+scene.background = null;
     const fallbackEquirect = createFallbackEnvMap();
     envMap = pmremGenerator.fromEquirectangular(fallbackEquirect).texture;
     if (fallbackEquirect.dispose) fallbackEquirect.dispose();
     scene.environment = envMap;
-    scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
+scene.background = null;
   }
 
   // Dispose PMREM generator to free resources
@@ -504,7 +504,10 @@ export function setHDRIBackgroundVisible(visible) {
   if (visible) {
     scene.background = envMap;
   } else {
-    scene.background = new THREE.Color(RENDER_CONFIG.BACKGROUND_COLOR);
+
+    scene.background = null;
+
+    
   }
 
   console.log(`🌅 HDRI background ${visible ? "shown" : "hidden"}`);
