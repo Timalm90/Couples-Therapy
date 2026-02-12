@@ -359,11 +359,8 @@ function animate() {
 
   if (LIQUID_GLASS_CONFIG.ENABLED && envMap) {
     cardsArray.forEach((card) => {
-      if (
-        card.backMesh &&
-        card.backMesh.material &&
-        card.backMesh.material.uniforms
-      ) {
+    if (card.backMesh?.material)
+ {
         updateLiquidGlassShader(card.backMesh.material, delta, camera);
       }
     });
@@ -509,5 +506,4 @@ export function setHDRIBackgroundVisible(visible) {
 
   console.log(`🌅 HDRI background ${visible ? "shown" : "hidden"}`);
 
-  console.log(`🌅 HDRI background ${visible ? "shown" : "hidden"}`);
 }

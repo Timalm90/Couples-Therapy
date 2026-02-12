@@ -14,7 +14,7 @@ export const CAMERA_CONFIG = {
 	// Camera tilt angle (in degrees) - How much the camera looks down at the cards
 	// 0° = straight ahead, 90° = directly overhead
 	// Recommended range: 20-45 degrees. Default: 30
-	TILT_ANGLE: 85,
+	TILT_ANGLE: 80,
 	
 	// Camera distance multiplier when auto-framing cards
 	// Higher = camera pulls back further, Lower = camera gets closer
@@ -65,11 +65,11 @@ export const HDRI_CONFIG = {
   SHOW_AS_BACKGROUND: true,
 
   // HDRI intensity/brightness multiplier
-  INTENSITY: 2.0,
+  INTENSITY: 1.0,
 
   // Background blur amount (0.0 = sharp, 1.0 = very blurred)
   // Only applies when SHOW_AS_BACKGROUND is true
-  BACKGROUND_BLUR: 2.0,
+  BACKGROUND_BLUR: 9.0,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -78,7 +78,6 @@ export const HDRI_CONFIG = {
 export const CARD_CONFIG = {
   TARGET_SIZE: 2.0, // Target card size after auto-scaling
   MATCH_RAISE_HEIGHT: 0.06, // How much matched cards raise
-  MATCH_TINT_COLOR: 0x857f74, // Green tint for matched cards
   MATCH_TINT_AMOUNT: 0.6, // How much to tint matched cards (0-1)
 };
 
@@ -92,52 +91,28 @@ export const LIQUID_GLASS_CONFIG = {
 	// Index of Refraction (IOR)
 	// 1.0 = air, 1.33 = water, 1.5 = glass, 2.4 = diamond
 	// Recommended range: 1.2-2.0
-	IOR: 1.0,
+	IOR: 2.4,
 	
 	// Thickness/depth of the glass
 	// Higher = thicker glass appearance
 	// Recommended range: 0.5-3.0
-	THICKNESS: 0.5,
+	THICKNESS: 3.5,
 	
 	// Reflectivity strength
 	// Higher = more mirror-like, Lower = more transparent
 	// Recommended range: 0.3-1.0
-	REFLECTIVITY: 1.0,
-	
-	// Fresnel power (edge glow effect)
-	// Higher = sharper edge highlight, Lower = softer
-	// Recommended range: 2.0-8.0
-	FRESNEL_POWER: 3.0,
+	REFLECTIVITY: 0.,
 	
 	// Glass color tint (RGB, 0-1 range)
-	COLOR_R: 0.9,
-	COLOR_G: 0.95,
+	COLOR_R: 1.0,
+	COLOR_G: 1.0,
 	COLOR_B: 1.0,
 	
 	// Overall opacity
 	// Recommended range: 0.7-1.0
-	OPACITY: 0.65,
-	
-	// Chromatic aberration (rainbow edge effect)
-	// Higher = more color separation, 0 = no aberration
-	// Recommended range: 0.0-2.0
-	CHROMATIC_ABERRATION: 2.0,
-	
-	// Liquid distortion amount
-	// Higher = more wavy/liquid effect
-	// Recommended range: 0.0-0.3
-	DISTORTION: 0.8,
-	
-	// Distortion pattern scale
-	// Higher = smaller waves, Lower = larger waves
-	// Recommended range: 2.0-20.0
-	DISTORTION_SCALE: 20.0,
-	
-	// Animate the liquid movement (true/false)
-	ANIMATE: true,
-	
-	// Animation speed multiplier (only used if ANIMATE is true)
-	ANIMATION_SPEED: 2.0,
+	OPACITY: 0.8,
+
+
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -176,7 +151,7 @@ export const LIGHTING_CONFIG = {
 	AMBIENT_COLOR: 0xffffff,
 	AMBIENT_INTENSITY: 0.4, // Reduced since HDRI provides lighting
 	DIRECTIONAL_COLOR: 0xffffff,
-	DIRECTIONAL_INTENSITY: 0.1,
+	DIRECTIONAL_INTENSITY: .1,
 	DIRECTIONAL_POSITION: { x: 10, y: 10, z: 10 },
 	
 	// Shadow-casting directional light (for card shadows)
