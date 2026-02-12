@@ -410,3 +410,8 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+
+canvas {
+  border-radius: 5%;
+}
