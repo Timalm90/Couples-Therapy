@@ -23,6 +23,34 @@ function normalizeLabel(col) {
   return COLOR_LABEL[key] || col;
 }
 
+// Helper: darken/lighten hex color
+function shadeColor(color, percent) {
+  let f = parseInt(color.slice(1), 16),
+      t = percent < 0 ? 0 : 255,
+      p = Math.abs(percent) / 100,
+      R = f >> 16,
+      G = (f >> 8) & 0x00ff,
+      B = f & 0x0000ff;
+  return (
+    "#" +
+    (
+      0x1000000 +
+      (Math.round((t - R) * p) + R) * 0x10000 +
+      (Math.round((t - G) * p) + G) * 0x100 +
+      (Math.round((t - B) * p) + B)
+    )
+      .toString(16)
+      .slice(1)
+  );
+}
+
+// Generate radial gradient CSS string for a given base color
+function createRadialGradient(color) {
+  const inner = color;
+  const outer = shadeColor(color, -55); // slightly darker at edges
+  return `radial-gradient(circle at center, ${inner} 0%, ${outer} 90%)`;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // GAME INFO DISPLAY
 // ═══════════════════════════════════════════════════════════════════════════
@@ -51,7 +79,7 @@ export function updateGameInfo(gameState) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// BACKGROUND COLOR
+// BACKGROUND GRADIENT
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function updateActivePlayerBackground(gameState) {
@@ -60,7 +88,7 @@ export function updateActivePlayerBackground(gameState) {
 
   // Add smooth transition on first call
   if (!board.style.transition) {
-    board.style.transition = `background-color ${ANIMATION_CONFIG.BACKGROUND_TRANSITION}`;
+    board.style.transition = `background 0.5s ease`;
   }
 
   const activePlayer = gameState.players[gameState.activePlayerIndex];
@@ -73,13 +101,15 @@ export function updateActivePlayerBackground(gameState) {
     green: "#8bd48b",
   };
 
-  const boardColor = BOARD_COLOR_MAP[activePlayer.color] || activePlayer.color;
-  board.style.backgroundColor = boardColor;
+  const baseColor = BOARD_COLOR_MAP[activePlayer.color] || activePlayer.color;
 
-  // keep possible blurred element in sync if present
+  // Apply radiant gradient
+  board.style.background = createRadialGradient(baseColor);
+
+  // Keep possible blurred pseudo-element in sync
   try {
     const blurEl = board.querySelector(".frame-blur");
-    if (blurEl) blurEl.style.backgroundColor = activePlayer.color;
+    if (blurEl) blurEl.style.background = createRadialGradient(baseColor);
   } catch (e) {
     // ignore
   }
@@ -176,16 +206,12 @@ export function showWinPopup(
   onConfettiStart,
   onConfettiStop,
 ) {
-  // Prevent showing popup multiple times for same game
   if (hasShownWinPopupForGameId === gameState.gameId) return;
   hasShownWinPopupForGameId = gameState.gameId;
 
-  // Start confetti
-  if (onConfettiStart) {
-    onConfettiStart();
-  }
+  if (onConfettiStart) onConfettiStart();
 
-  const { winners, maxScore } = getWinners(gameState);
+  const { winners } = getWinners(gameState);
   const isDraw = winners.length > 1;
 
   const title = isDraw
@@ -212,34 +238,22 @@ export function showWinPopup(
 
   document.body.appendChild(overlay);
 
-  // Close popup handler
   const closePopup = () => {
     overlay.remove();
-    if (onConfettiStop) {
-      onConfettiStop();
-    }
+    if (onConfettiStop) onConfettiStop();
   };
 
-  // Close on click outside
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) closePopup();
   });
 
-  // Close button
-  overlay
-    .querySelector("#closeWinModal")
-    ?.addEventListener("click", closePopup);
-
-  // Play again button
+  overlay.querySelector("#closeWinModal")?.addEventListener("click", closePopup);
   overlay.querySelector("#playAgainBtn")?.addEventListener("click", () => {
     closePopup();
-    if (onPlayAgain) {
-      onPlayAgain(gameState.players.length);
-    }
+    if (onPlayAgain) onPlayAgain(gameState.players.length);
   });
 }
 
-// Reset win popup tracking (useful when starting a new game)
 export function resetWinPopupTracking() {
   hasShownWinPopupForGameId = null;
 }
