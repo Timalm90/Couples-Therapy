@@ -78,7 +78,7 @@ export const HDRI_CONFIG = {
 export const CARD_CONFIG = {
   TARGET_SIZE: 2.0, // Target card size after auto-scaling
   MATCH_RAISE_HEIGHT: 0.06, // How much matched cards raise
-  MATCH_TINT_COLOR: 0x857f74, // Green tint for matched cards
+//   MATCH_TINT_COLOR: 0x857f74, // Green tint for matched cards
   MATCH_TINT_AMOUNT: 0.6, // How much to tint matched cards (0-1)
 };
 
