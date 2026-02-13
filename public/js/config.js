@@ -47,7 +47,7 @@ export const RENDER_CONFIG = {
   SHADOWS_ENABLED: true,
   SHADOW_MAP_SIZE: 2048, // Higher = better quality, lower performance (512, 1024, 2048, 4096)
   SHADOW_BIAS: -0.0001,
-  SHADOW_RADIUS: 2.0, // Soft shadow blur
+  SHADOW_RADIUS: 20.0, // Soft shadow blur
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -61,14 +61,12 @@ export const HDRI_CONFIG = {
   PATH: "./assets/textures/01.hdr",
 
   // Show HDRI as background (true) or use solid color background (false)
-  // Note: HDRI will still provide lighting/reflections even when not visible
   SHOW_AS_BACKGROUND: true,
 
   // HDRI intensity/brightness multiplier
   INTENSITY: 1.5,
 
   // Background blur amount (0.0 = sharp, 1.0 = very blurred)
-  // Only applies when SHOW_AS_BACKGROUND is true
   BACKGROUND_BLUR: 2.0,
 };
 
@@ -79,7 +77,7 @@ export const CARD_CONFIG = {
   TARGET_SIZE: 2.0, // Target card size after auto-scaling
   MATCH_RAISE_HEIGHT: 0.06, // How much matched cards raise
   MATCH_TINT_COLOR: 0x857f74, // Green tint for matched cards
-  MATCH_TINT_AMOUNT: 0.6, // How much to tint matched cards (0-1)
+  MATCH_TINT_AMOUNT: 0.0, // How much to tint matched cards (0-1)
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
